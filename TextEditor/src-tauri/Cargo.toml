@@ -1,0 +1,33 @@
+[package]
+name = "DraftEditor"
+version = "1.4.2"
+description = "小説執筆にも使えるシンプルなテキストエディタ"
+authors = ["Nez"]
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+# The `_lib` suffix may seem redundant but it is necessary
+# to make the lib name unique and wouldn't conflict with the bin name.
+# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
+name = "texteditor_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tauri-plugin-fs = "2"
+tauri-plugin-dialog = "2"
+
+[profile.release]
+opt-level = 3       # 最大最適化
+lto = true          # リンク時最適化
+codegen-units = 1   # 並列コンパイル数を減らして最適化優先
+strip = true        # デバッグシンボルを削除してバイナリを軽量化
+panic = "abort"     # パニック時の処理を簡略化

@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Zoomi's editor</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <header id="titlebar" data-tauri-drag-region>
+    <div class="menu-container">
+      <div id="btn-menu" class="menu-btn">≡</div>
+      <div id="dropdown-menu" class="dropdown hidden">
+        <div id="menu-new" class="menu-item"><span>新規作成</span><span class="shortcut">Ctrl+N</span></div>
+        <div id="menu-open" class="menu-item"><span>開く</span><span class="shortcut">Ctrl+O</span></div>
+        <div class="menu-item has-submenu">
+          <span>登録パスから開く</span><span class="shortcut">▶</span>
+          <div class="submenu">
+            <div id="menu-add-folder" class="menu-item"><span>＋ フォルダを登録</span></div>
+            <div id="menu-add-file" class="menu-item"><span>＋ ファイルを登録</span></div>
+            <div style="border-bottom: 1px solid rgba(127,127,127,0.3); margin: 4px 0;"></div>
+            <div id="registered-paths-list"></div>
+          </div>
+        </div>
+        <div id="menu-save" class="menu-item"><span>上書き保存</span><span class="shortcut">Ctrl+S</span></div>
+        <div id="menu-save-as" class="menu-item"><span>別名保存</span><span class="shortcut">Shift+Ctrl+S</span></div>
+        <div style="border-bottom: 1px solid rgba(127,127,127,0.3); margin: 4px 0;"></div>
+        
+        <div class="menu-item has-submenu">
+          <span>ブックマーク</span><span class="shortcut">▶</span>
+          <div class="submenu" id="bookmark-list"><div class="menu-item" style="color:var(--counter-color);">(なし)</div></div>
+        </div>
+        <div id="menu-outline" class="menu-item"><span>アウトライン表示切替</span></div>
+        <div id="menu-preview" class="menu-item"><span>縦書きビュー表示切替</span></div>
+        <div style="border-bottom: 1px solid rgba(127,127,127,0.3); margin: 4px 0;"></div>
+        <div id="menu-settings" class="menu-item"><span>設定</span></div>
+      </div>
+    </div>
+    <span id="file-name" class="file-name">新規ファイル</span>
+    <div class="titlebar-buttons">
+      <div class="titlebar-button minimize" id="titlebar-minimize"><span>ー</span></div>
+      <div class="titlebar-button maximize" id="titlebar-maximize"><span>□</span></div>
+      <div class="titlebar-button close" id="titlebar-close"><span>×</span></div>
+    </div>
+  </header>
+
+  <div id="app-wrapper">
+    <!-- サイドバー -->
+    <div id="sidebar" class="hidden">
+      <div class="sidebar-header">
+        <span>アウトライン</span>
+        <div><button class="sb-btn" id="btn-outline-refresh" title="更新">↻</button><button class="sb-btn" id="btn-outline-close" title="閉じる">×</button></div>
+      </div>
+      <div id="outline-tree"></div>
+    </div>
+    <div id="sidebar-resizer" class="hidden"></div>
+    
+    <!-- 中央・下段を包むラッパー（上下分割専用） -->
+    <div id="main-content-wrapper">
+      <!-- 縦書きビュー（常に上） -->
+      <div id="preview-pane" class="hidden">
+        <div class="sidebar-header">
+          <span>縦書きビュー</span>
+          <div>
+            <button class="sb-btn" id="btn-preview-full" title="全画面切替">📖</button>
+            <button class="sb-btn" id="btn-preview-close" title="閉じる">×</button>
+          </div>
+        </div>
+        <div id="preview-content"></div>
+      </div>
+      <div id="preview-resizer" class="hidden"></div>
+      
+      <!-- 中央エディタ（常に下） -->
+      <main id="editor-container"></main>
+    </div>
+  </div>
+
+  <div id="word-counter" class="word-counter">0 文字</div>
+
+<!-- 設定モーダル -->
+<div id="settings-modal" class="modal hidden">
+  <div class="modal-content">
+    <div class="modal-sidebar">
+      <button class="tab-btn active" data-tab="text">テキスト</button>
+      <button class="tab-btn" data-tab="display">表示</button>
+      <button class="tab-btn" data-tab="theme">テーマ</button>
+      <button class="tab-btn" data-tab="outline">アウトライン</button>
+      <button class="tab-btn" data-tab="backup">システム</button>
+      <button class="tab-btn" data-tab="shortcut">キー</button>
+      <button class="tab-btn" data-tab="version">バージョン</button>
+    </div>
+    <div class="modal-body">
+      
+      <!-- テキスト設定 -->
+      <div class="tab-panel" id="tab-text">
+        <div class="setting-group setting-column"><label>フォント (エディタ部分)</label><input type="text" id="set-editor-font"></div>
+        <div class="setting-group setting-column"><label>フォント (縦書きビュー)</label><input type="text" id="set-preview-font" placeholder="例: 'Sawarabi Mincho', serif"></div>
+        <div class="setting-group setting-column"><label>フォント (UI・メニュー部分)</label><input type="text" id="set-ui-font"></div>
+        <div class="setting-group"><label>文字サイズ (px)</label><input type="number" id="set-fs" min="8" max="120"></div>
+        <div class="setting-group"><label>行間</label><input type="number" id="set-lh" step="0.1" min="1" max="5"></div>
+        <div class="setting-group"><label title="0でウィンドウ幅に合わせます">1行の文字数 (0で無制限)</label><input type="number" id="set-line-length" min="0" max="200" title="0で無制限"></div>
+        <hr style="border-color:rgba(127,127,127,0.3); margin:15px 0;">
+        <div class="setting-column">
+          <label>「テキスト」と「表示」のセット保存</label>
+          <div style="display:flex; justify-content:space-between; align-items:center; width:100%; margin-bottom:5px;">
+             <select id="select-text-slot" style="width: 100px;"><option value="1">セット 1</option><option value="2">セット 2</option><option value="3">セット 3</option></select>
+             <div><button class="btn" id="btn-save-text-slot">保存</button> <button class="btn btn-cancel" id="btn-load-text-slot">読込</button></div>
+          </div>
+          <div id="text-slot-preview" style="text-align: right; font-size: 11px; opacity: 0.7; line-height: 1.4; word-break: break-all;"></div>
+        </div>
+      </div>
+
+      <!-- 表示設定 -->
+      <div class="tab-panel hidden" id="tab-display">
+        <div class="setting-group"><label>タイプライターモード</label><input type="checkbox" id="set-typewriter"></div>
+        <div class="setting-group"><label>アクティブ行ハイライト</label><input type="checkbox" id="set-active-line-enabled"></div>
+        <hr style="border-color:rgba(127,127,127,0.3); margin:15px 0;">
+        <div class="setting-group"><label>上下フェード</label><input type="checkbox" id="set-fade-enabled"></div>
+        <div class="setting-group"><label>上フェード範囲 (px)</label><input type="number" id="set-fade-range-top" min="0" max="500"></div>
+        <div class="setting-group"><label>下フェード範囲 (px)</label><input type="number" id="set-fade-range-bottom" min="0" max="500"></div>
+        <div class="setting-group"><label>フェード強度 (0〜1)</label><input type="number" id="set-fade-opacity" step="0.05" min="0" max="1"></div>
+        <hr style="border-color:rgba(127,127,127,0.3); margin:15px 0;">
+        <div class="setting-group"><label>文字数カウントに改行を含める</label><input type="checkbox" id="set-count-newline"></div>
+        <div class="setting-group"><label>縦書きビューの初回表示を上下分割にする</label><input type="checkbox" id="set-preview-split-first"></div>
+      </div>
+
+      <!-- テーマ設定 -->
+      <div class="tab-panel hidden" id="tab-theme">
+        <div class="setting-column">
+          <label>テーマの適用 (プリセット / カスタム)</label>
+          <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+            <select id="select-theme-load" style="width: 150px;">
+              <option value="p_dark">プリセット：ダーク</option><option value="p_light">プリセット：ライト</option><option value="p_parchment">プリセット：羊皮紙</option>
+              <option value="c_1">カスタム Slot 1</option><option value="c_2">カスタム Slot 2</option><option value="c_3">カスタム Slot 3</option>
+            </select>
+            <button class="btn" id="btn-apply-theme">適用</button>
+          </div>
+        </div>
+        <div class="setting-group" style="margin-top:10px;"><label>ウィンドウボタンの形</label><select id="set-btn-style"><option value="mac">丸（カラー）</option><option value="windows">記号（ー □ ×）</option></select></div>
+        <hr style="border-color:rgba(127,127,127,0.3); margin:10px 0;">
+        <div class="setting-group"><label>タイトルバー背景色</label><input type="color" id="set-titlebar-bg"></div>
+        <div class="setting-group"><label>タイトルバー文字色</label><input type="color" id="set-titlebar-text"></div>
+        <div class="setting-group"><label>エディタ背景色</label><input type="color" id="set-bg-color"></div>
+        <div class="setting-group"><label>文字色（全体）</label><input type="color" id="set-text-color"></div>
+        <div class="setting-group"><label>文字選択時の色（半透明）</label><input type="color" id="set-selection-color"></div>
+        <div class="setting-group"><label>アクティブ行ハイライト色</label><input type="color" id="set-active-line-color"></div>
+        <div class="setting-group"><label>文字数カウントの文字色</label><input type="color" id="set-counter-color"></div>
+        <hr style="border-color:rgba(127,127,127,0.3); margin:10px 0;">
+        <div class="setting-group"><label>メニュー・設定の背景色</label><input type="color" id="set-menu-bg"></div>
+        <div class="setting-group"><label>ハイライト色（ボタン等）</label><input type="color" id="set-highlight-color"></div>
+        <hr style="border-color:rgba(127,127,127,0.3); margin:10px 0;">
+        <div class="setting-column"><label>現在の状態をカスタムテーマに保存</label><div style="display:flex; justify-content:space-between; align-items:center; width:100%;"><select id="select-theme-save" style="width: 150px;"><option value="1">Slot 1</option><option value="2">Slot 2</option><option value="3">Slot 3</option></select><button class="btn btn-cancel" id="btn-save-theme-slot">保存</button></div></div>
+      </div>
+
+      <!-- アウトライン設定 -->
+      <div class="tab-panel hidden" id="tab-outline">
+        <div class="setting-group"><label>マークダウン方式 (## など) を見出しにする</label><input type="checkbox" id="set-ol-md"></div>
+        <hr style="border-color:rgba(127,127,127,0.3); margin:10px 0;">
+        <div id="ol-levels-container"></div>
+        <hr style="border-color:rgba(127,127,127,0.3); margin:15px 0;">
+        <div class="setting-column">
+          <label style="font-weight:bold;">カスタム見出し設定 (正規表現)</label>
+          <div style="display:flex; justify-content:space-between; width:100%; margin-top:5px;">
+            <select id="select-custom-ol" style="width:130px;"><option value="1">カスタム 1</option><option value="2">カスタム 2</option><option value="3">カスタム 3</option><option value="4">カスタム 4</option><option value="5">カスタム 5</option><option value="6">カスタム 6</option></select>
+            <button class="btn" id="btn-save-custom-ol">保存して名前変更</button>
+          </div>
+          <input type="text" id="input-custom-reg" placeholder="例: ^【.+?】$" style="margin-top:5px;">
+          <div style="font-size:11px; opacity:0.7; margin-top:5px;">テスト用テキスト（下の枠にハイライト結果が出ます）</div>
+          <textarea id="test-custom-text" style="width:100%; height:60px; background:var(--bg-color); color:var(--text-color); border:1px solid rgba(127,127,127,0.4); padding:4px; box-sizing:border-box; outline:none; resize:none;">第一章　始まり&#13;&#10;ここは見出しではない。&#13;&#10;【プロローグ】&#13;&#10;テキストテスト。</textarea>
+          <div id="test-custom-result" style="width:100%; height:60px; background:var(--menu-bg); border:1px solid rgba(127,127,127,0.4); padding:4px; margin-top:5px; box-sizing:border-box; overflow-y:auto; font-size:12px; white-space:pre-wrap;"></div>
+        </div>
+      </div>
+
+      <!-- システム設定 -->
+      <div class="tab-panel hidden" id="tab-backup">
+        <div class="setting-group"><label>自動保存を有効にする (1分間隔)</label><input type="checkbox" id="set-autosave-enabled"></div>
+        <div class="setting-group"><label>終了時バックアップを有効にする</label><input type="checkbox" id="set-backup-enabled"></div>
+        <div class="setting-column"><div style="display:flex; justify-content:space-between; align-items:center; width:100%;"><label>バックアップ保存先フォルダ</label><button class="btn btn-cancel" id="btn-select-backup-dir">選択</button></div><div style="display:flex; justify-content:flex-end; width:100%; margin-top:5px;"><button class="btn btn-cancel" id="btn-clear-backup-dir" style="background:#8b4545; color:white;">デフォルトに戻す</button></div><div style="text-align: right; margin-top:5px;"><span id="display-backup-dir" style="font-size:11px; opacity:0.7; word-break:break-all;">未設定 (ファイルと同じ場所に/backupを作成)</span></div></div>
+      </div>
+
+      <!-- ショートカット設定 -->
+      <div class="tab-panel hidden" id="tab-shortcut">
+        <div id="shortcut-list-container"></div>
+      </div>
+
+      <div class="tab-panel hidden" id="tab-version">
+        <div style="text-align: center; margin-top: 60px;">
+          <h2 style="margin-bottom: 5px; color: var(--highlight-color);">Zoomi's Editor</h2>
+          <p style="font-size: 15px; opacity: 0.9; margin-bottom: 20px;">Version 1.4.2</p>
+          <p style="font-size: 12px; opacity: 0.6; margin-bottom: 5px;">Build Date : 2026-06-15</p>
+          <p style="font-size: 12px; opacity: 0.6;">Powered by Tauri & CodeMirror</p>
+        </div>
+      </div>
+
+      <div class="modal-actions" style="margin-top:auto;">
+        <button id="btn-save-settings" class="btn">適用して閉じる</button>
+        <button id="btn-close-settings" class="btn btn-cancel">キャンセル</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="fade-top"></div>
+<div id="fade-bottom"></div>
+<script src="bundle.js"></script>
+</body>
+</html>
