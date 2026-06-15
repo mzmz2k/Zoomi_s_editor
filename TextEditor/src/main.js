@@ -106,7 +106,14 @@ const editorView = new EditorView({
 });
 
 function getEditorText() { return editorView.state.doc.toString(); }
-function setEditorText(text) { editorView.dispatch({ changes: { from: 0, to: editorView.state.doc.length, insert: text.replace(/\r\n/g, '\n') } }); parseOutlineAndBookmarks(); updatePreviewContent(); }
+function setEditorText(text) { 
+  editorView.dispatch({ changes: { from: 0, to: editorView.state.doc.length, insert: text.replace(/\r\n/g, '\n') } }); 
+  // ★画面の描画を最優先させるため、重い解析処理を少しだけ遅延させる
+  setTimeout(() => {
+    parseOutlineAndBookmarks(); 
+    updatePreviewContent();
+  }, 20);
+}
 
 const rootStyle = document.documentElement.style;
 const defaultPresets = [
@@ -382,22 +389,22 @@ async function createNewWindow(initialFilePath = null) { if (!WebviewWindow) ret
 async function openFileDirect(filePath) { 
   try { 
     let text = "";
-    // Tauri v2 の readFile か、v1 の readBinaryFile のどちらか使える方を取得
     const readBin = readFile || readBinaryFile; 
     
     if (readBin) {
       const bytes = await readBin(filePath);
       try {
-        // まずUTF-8として厳密にデコード（Shift-JISならここで必ずエラーになる）
         text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
       } catch (e) {
-        // エラーを検知したらShift-JISとしてデコード
         text = new TextDecoder('shift-jis').decode(bytes);
       }
     } else {
       text = await readTextFile(filePath); 
     }
-    setEditorText(text); currentFilePath = filePath; setDirty(false); updateWordCount(); parseOutlineAndBookmarks(); 
+    
+    // ★ここで setEditorText が呼ばれ、その中で遅延して目次解析されるので、ここでの二重呼び出しは削除
+    setEditorText(text); currentFilePath = filePath; setDirty(false); updateWordCount(); 
+    
   } catch (err) { 
     await message(`開けません。\n${err}`, { type: 'error' }); 
   } 
@@ -554,7 +561,8 @@ async function loadStartupFile() {
   const openPath = new URLSearchParams(window.location.search).get('open'); if (openPath) { await openFileDirect(openPath); return; }
   try { const data = await invoke('get_startup_file'); if (data) { setEditorText(data.content); currentFilePath = data.path; setDirty(false); updateWordCount(); } } catch (err) {}
 }
-requestIdleCallback(() => loadStartupFile());
+// PCのアイドルを待たず、即座にファイルの読み込みを開始する
+setTimeout(() => loadStartupFile(), 0);
 
 const observer = new MutationObserver((mutations) => { mutations.forEach(m => { m.addedNodes.forEach(node => { if (node.nodeType === 1 && node.classList && node.classList.contains('cm-panels')) { const p = node.querySelector('.cm-search'); if (!p) return; const s = p.querySelector('input[name="search"]'), r = p.querySelector('input[name="replace"]'); if (s) s.setAttribute('autocomplete', 'off'); if (r) r.setAttribute('autocomplete', 'off'); p.querySelectorAll('label').forEach(l => { const t = (l.title || "").toLowerCase(); if (t.includes("case")) l.title = "大文字と小文字を区別する"; else if (t.includes("regexp") || t.includes("regular")) l.title = "正規表現を使用する"; else if (t.includes("word")) l.title = "単語単位で検索する"; }); } }); }); });
 observer.observe(document.body, { childList: true, subtree: true });

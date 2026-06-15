@@ -17845,8 +17845,10 @@
   }
   function setEditorText(text) {
     editorView.dispatch({ changes: { from: 0, to: editorView.state.doc.length, insert: text.replace(/\r\n/g, "\n") } });
-    parseOutlineAndBookmarks();
-    updatePreviewContent();
+    setTimeout(() => {
+      parseOutlineAndBookmarks();
+      updatePreviewContent();
+    }, 20);
   }
   var rootStyle = document.documentElement.style;
   var defaultPresets = [
@@ -18313,7 +18315,6 @@
       currentFilePath = filePath;
       setDirty(false);
       updateWordCount();
-      parseOutlineAndBookmarks();
     } catch (err) {
       await message(`\u958B\u3051\u307E\u305B\u3093\u3002
 ${err}`, { type: "error" });
@@ -18743,7 +18744,7 @@ ${err}`, { type: "error" });
     } catch (err) {
     }
   }
-  requestIdleCallback(() => loadStartupFile());
+  setTimeout(() => loadStartupFile(), 0);
   var observer = new MutationObserver((mutations) => {
     mutations.forEach((m) => {
       m.addedNodes.forEach((node) => {
