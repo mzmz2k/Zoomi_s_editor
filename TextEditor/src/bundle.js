@@ -18677,7 +18677,7 @@ ${err}`, { type: "error" });
       el.addEventListener("click", async () => {
         document.getElementById("dropdown-menu").classList.add("hidden");
         if (p.isDir) {
-          const filePath = await open({ defaultPath: p.path, filters: [{ name: "Text", extensions: ["txt", "md", "dra"] }] });
+          const filePath = await open({ defaultPath: p.path, filters: [{ name: "Text", extensions: ["txt", "md"] }] });
           if (filePath) isDirty ? createNewWindow(filePath) : await openFileDirect(filePath);
         } else {
           isDirty ? createNewWindow(p.path) : await openFileDirect(p.path);

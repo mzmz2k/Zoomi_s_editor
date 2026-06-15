@@ -21,14 +21,6 @@
     }
   },
   "bundle": {
-    "fileAssociations": [
-      {
-        "ext": ["dra"],
-        "name": "Zoomi Document",
-        "description": "Zoomi Editor File"
-      }
-    ],
-
     "active": true,
     "targets": "msi",
     "icon": [
