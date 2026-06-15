@@ -17751,21 +17751,40 @@
     wordCounter.textContent = countText.length + " \u5B57";
   }
   var debouncedWordCount = debounce(updateWordCount, 300);
+  function syncPreviewToPos(pos) {
+    const prScroll2 = document.getElementById("preview-content");
+    if (previewPane.classList.contains("hidden") || !prScroll2.firstChild) return;
+    try {
+      const node = prScroll2.firstChild;
+      const safePos = Math.max(0, Math.min(pos, node.length - 1));
+      const range = document.createRange();
+      range.setStart(node, safePos);
+      range.setEnd(node, safePos + 1);
+      const rect = range.getBoundingClientRect();
+      const prRect = prScroll2.getBoundingClientRect();
+      const targetX = rect.left + rect.width / 2;
+      const containerCenterX = prRect.left + prRect.width / 2;
+      prScroll2.scrollLeft += targetX - containerCenterX;
+    } catch (e) {
+    }
+  }
   var updatePreviewContent = debounce(() => {
     const pane = document.getElementById("preview-pane");
     if (!pane.classList.contains("hidden")) {
       const prScroll2 = document.getElementById("preview-content");
-      const wasAtLeft = prScroll2.scrollLeft <= 0 && prScroll2.scrollLeft >= -10;
-      prScroll2.innerText = getEditorText();
-      if (wasAtLeft) prScroll2.scrollLeft = 0;
+      prScroll2.textContent = getEditorText();
+      syncPreviewToPos(editorView.state.selection.main.head);
     }
-  }, 500);
+  }, 300);
   var typewriterLockedY = null;
   var combinedUpdateListener = EditorView.updateListener.of((update) => {
     if (update.docChanged) {
       setDirty(true);
       debouncedWordCount();
       updatePreviewContent();
+    }
+    if (update.selectionSet && !update.view.composing && !previewPane.classList.contains("hidden")) {
+      syncPreviewToPos(update.state.selection.main.head);
     }
     if (!currentSettings.typewriterMode) return;
     if (update.view.composing) return;
@@ -18044,17 +18063,28 @@
   edScroll.addEventListener("scroll", () => {
     if (previewPane.classList.contains("hidden") || isSyncingLeft) return;
     isSyncingRight = true;
-    const ratio = edScroll.scrollTop / (edScroll.scrollHeight - edScroll.clientHeight || 1);
-    const prMax = prScroll.scrollWidth - prScroll.clientWidth;
-    prScroll.scrollLeft = -(prMax * ratio);
+    const pos = editorView.posAtCoords({ x: edScroll.getBoundingClientRect().left + 50, y: edScroll.getBoundingClientRect().top + edScroll.clientHeight / 2 }, false);
+    if (pos !== null) syncPreviewToPos(pos);
     setTimeout(() => isSyncingRight = false, 50);
   });
   prScroll.addEventListener("scroll", () => {
     if (previewPane.classList.contains("hidden") || isSyncingRight) return;
     isSyncingLeft = true;
-    const prMax = prScroll.scrollWidth - prScroll.clientWidth || 1;
-    const ratio = Math.abs(prScroll.scrollLeft) / prMax;
-    edScroll.scrollTop = ratio * (edScroll.scrollHeight - edScroll.clientHeight);
+    const prRect = prScroll.getBoundingClientRect();
+    const centerX = prRect.left + prRect.width / 2;
+    const centerY = prRect.top + prRect.height / 2;
+    let pos = -1;
+    if (document.caretPositionFromPoint) {
+      const range = document.caretPositionFromPoint(centerX, centerY);
+      if (range) pos = range.offset;
+    } else if (document.caretRangeFromPoint) {
+      const range = document.caretRangeFromPoint(centerX, centerY);
+      if (range) pos = range.startOffset;
+    }
+    if (pos >= 0) {
+      const coords = editorView.coordsAtPos(pos);
+      if (coords) edScroll.scrollTop += coords.top - edScroll.getBoundingClientRect().top - edScroll.clientHeight / 2;
+    }
     setTimeout(() => isSyncingLeft = false, 50);
   });
   function getRegexList(level) {

@@ -58,8 +58,8 @@ body.btn-style-windows .titlebar-button span { display: block; font-size: 14px; 
 #preview-pane.hidden { display: none; }
 #preview-pane.full { position: absolute !important; top: 0; left: 0; right: 0; bottom: 0; width: 100% !important; height: 100% !important; z-index: 80; border-bottom: none; }
 #preview-content { 
-  flex: 1; overflow: auto; 
-  padding: 40px 40px 40px 50vw; 
+  flex: 1; overflow-y: hidden !important; overflow-x: auto !important; 
+  padding: 40px 40px 40px 50vw;
   writing-mode: vertical-rl; text-orientation: upright; 
   font-family: var(--preview-font-family); font-size: var(--font-size); line-height: var(--line-height); 
   white-space: pre-wrap; color: var(--text-color);

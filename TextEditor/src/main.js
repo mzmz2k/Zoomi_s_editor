@@ -37,24 +37,44 @@ function updateWordCount() {
 }
 const debouncedWordCount = debounce(updateWordCount, 300);
 
+// ★プレビューの指定した文字位置（オフセット）を画面のど真ん中に持ってくる魔法の関数
+function syncPreviewToPos(pos) {
+  const prScroll = document.getElementById('preview-content');
+  if (previewPane.classList.contains('hidden') || !prScroll.firstChild) return;
+  try {
+    const node = prScroll.firstChild;
+    const safePos = Math.max(0, Math.min(pos, node.length - 1));
+    const range = document.createRange();
+    range.setStart(node, safePos); range.setEnd(node, safePos + 1);
+    const rect = range.getBoundingClientRect(); const prRect = prScroll.getBoundingClientRect();
+    // 文字のX座標と、コンテナの中央X座標の差分を計算してスクロールに足す
+    const targetX = rect.left + (rect.width / 2); const containerCenterX = prRect.left + (prRect.width / 2);
+    prScroll.scrollLeft += (targetX - containerCenterX);
+  } catch(e) {}
+}
+
+// ★テキスト反映の爆速化（innerTextをtextContentに変更し、即座に同期）
 const updatePreviewContent = debounce(() => {
   const pane = document.getElementById('preview-pane');
   if (!pane.classList.contains('hidden')) {
     const prScroll = document.getElementById('preview-content');
-    const wasAtLeft = (prScroll.scrollLeft <= 0 && prScroll.scrollLeft >= -10);
-    prScroll.innerText = getEditorText();
-    if (wasAtLeft) prScroll.scrollLeft = 0; 
+    prScroll.textContent = getEditorText(); // ← innerTextの100倍速い
+    syncPreviewToPos(editorView.state.selection.main.head);
   }
-}, 500);
+}, 300);
+
 
 let typewriterLockedY = null;
 const combinedUpdateListener = EditorView.updateListener.of((update) => {
   if (update.docChanged) { setDirty(true); debouncedWordCount(); updatePreviewContent(); }
-  if (!currentSettings.typewriterMode) return;
   
-  // ★修正：IME入力中（変換中）はスクロール位置の強制同期を一時停止し、IMEの暴走を防ぐ
-  if (update.view.composing) return;
+  // ★追加：カーソルが移動したらプレビューもその文字にジャンプして追従する
+  if (update.selectionSet && !update.view.composing && !previewPane.classList.contains('hidden')) {
+    syncPreviewToPos(update.state.selection.main.head);
+  }
 
+  if (!currentSettings.typewriterMode) return;
+  if (update.view.composing) return;
   const isPointer = update.transactions.some(tr => tr.isUserEvent("select.pointer"));
   if (update.selectionSet && isPointer) { requestAnimationFrame(() => { const coords = update.view.coordsAtPos(update.state.selection.main.head); if (coords) typewriterLockedY = coords.top; }); } 
   else if (update.docChanged || update.selectionSet) { if (typewriterLockedY === null) return; requestAnimationFrame(() => { const coords = update.view.coordsAtPos(update.state.selection.main.head); if (coords && Math.abs(coords.top - typewriterLockedY) > 1) update.view.scrollDOM.scrollTop += (coords.top - typewriterLockedY); }); }
@@ -186,20 +206,31 @@ prScroll.addEventListener('wheel', (e) => { if (!e.ctrlKey) { e.preventDefault()
 
 let isSyncingLeft = false; let isSyncingRight = false;
 const edScroll = editorView.scrollDOM; 
+
+// ★横書きエディタ → 縦書きプレビュー の完全同期
 edScroll.addEventListener('scroll', () => {
   if (previewPane.classList.contains('hidden') || isSyncingLeft) return;
   isSyncingRight = true;
-  const ratio = edScroll.scrollTop / (edScroll.scrollHeight - edScroll.clientHeight || 1);
-  const prMax = prScroll.scrollWidth - prScroll.clientWidth;
-  prScroll.scrollLeft = - (prMax * ratio); 
+  // エディタ画面の中央にある文字のインデックスを取得
+  const pos = editorView.posAtCoords({ x: edScroll.getBoundingClientRect().left + 50, y: edScroll.getBoundingClientRect().top + (edScroll.clientHeight / 2) }, false);
+  if (pos !== null) syncPreviewToPos(pos);
   setTimeout(() => isSyncingRight = false, 50);
 });
+// ★縦書きプレビュー → 横書きエディタ の完全同期
 prScroll.addEventListener('scroll', () => {
   if (previewPane.classList.contains('hidden') || isSyncingRight) return;
   isSyncingLeft = true;
-  const prMax = prScroll.scrollWidth - prScroll.clientWidth || 1;
-  const ratio = Math.abs(prScroll.scrollLeft) / prMax;
-  edScroll.scrollTop = ratio * (edScroll.scrollHeight - edScroll.clientHeight);
+  const prRect = prScroll.getBoundingClientRect();
+  const centerX = prRect.left + (prRect.width / 2); const centerY = prRect.top + (prRect.height / 2);
+  let pos = -1;
+  // プレビュー画面の中央にある文字を座標から逆算
+  if (document.caretPositionFromPoint) { const range = document.caretPositionFromPoint(centerX, centerY); if (range) pos = range.offset; } 
+  else if (document.caretRangeFromPoint) { const range = document.caretRangeFromPoint(centerX, centerY); if (range) pos = range.startOffset; }
+  
+  if (pos >= 0) {
+    const coords = editorView.coordsAtPos(pos);
+    if (coords) edScroll.scrollTop += (coords.top - edScroll.getBoundingClientRect().top - (edScroll.clientHeight / 2));
+  }
   setTimeout(() => isSyncingLeft = false, 50);
 });
 
