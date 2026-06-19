@@ -432,6 +432,13 @@ document.addEventListener('keydown', async (e) => {
   if (e.ctrlKey && e.key.toLowerCase() === 'n') { e.preventDefault(); createNewWindow(); }
 });
 
+appWindow.onFocusChanged(({ payload: focused }) => {
+  if (focused && !editorView.hasFocus) {
+    // 復帰直後すぎると効かないことがあるので少し遅らせる
+    setTimeout(() => editorView.focus(), 30);
+  }
+});
+
 const dropdown = document.getElementById('dropdown-menu'), modal = document.getElementById('settings-modal');
 document.getElementById('btn-menu').addEventListener('click', () => dropdown.classList.toggle('hidden')); document.addEventListener('click', (e) => { if (!document.getElementById('btn-menu').contains(e.target) && !dropdown.contains(e.target)) dropdown.classList.add('hidden'); });
 document.getElementById('menu-new').addEventListener('click', () => { dropdown.classList.add('hidden'); createNewWindow(); }); document.getElementById('menu-open').addEventListener('click', () => { dropdown.classList.add('hidden'); openFile(); }); document.getElementById('menu-save').addEventListener('click', () => { dropdown.classList.add('hidden'); saveFile(false); }); document.getElementById('menu-save-as').addEventListener('click', () => { dropdown.classList.add('hidden'); saveFile(true); });

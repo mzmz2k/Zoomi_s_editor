@@ -18419,6 +18419,11 @@ ${err}`, { type: "error" });
       createNewWindow();
     }
   });
+  appWindow.onFocusChanged(({ payload: focused }) => {
+    if (focused && !editorView.hasFocus) {
+      setTimeout(() => editorView.focus(), 30);
+    }
+  });
   var dropdown = document.getElementById("dropdown-menu");
   var modal = document.getElementById("settings-modal");
   document.getElementById("btn-menu").addEventListener("click", () => dropdown.classList.toggle("hidden"));
