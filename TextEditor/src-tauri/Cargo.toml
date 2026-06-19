@@ -31,3 +31,6 @@ lto = true          # リンク時最適化
 codegen-units = 1   # 並列コンパイル数を減らして最適化優先
 strip = true        # デバッグシンボルを削除してバイナリを軽量化
 panic = "abort"     # パニック時の処理を簡略化
+
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-window-state = "2"
