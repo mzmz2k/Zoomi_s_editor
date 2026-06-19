@@ -66,7 +66,9 @@ const updatePreviewContent = debounce(() => {
 
 let typewriterLockedY = null;
 const combinedUpdateListener = EditorView.updateListener.of((update) => {
-  if (update.docChanged) { setDirty(true); debouncedWordCount(); updatePreviewContent(); }
+  if (update.docChanged) { 
+    cachedText = null; // 変更があったらキャッシュ破棄
+    setDirty(true); debouncedWordCount(); updatePreviewContent(); }
   
   // ★追加：カーソルが移動したらプレビューもその文字にジャンプして追従する
   if (update.selectionSet && !update.view.composing && !previewPane.classList.contains('hidden')) {
@@ -88,7 +90,6 @@ const customTheme = EditorView.theme({
   "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection": { backgroundColor: "var(--selection-color)" },
   ".cm-activeLine": { backgroundColor: "var(--active-line-color) !important" }
 });
-const toggleSearchPanel = (view) => { if (view.dom.querySelector('.cm-search')) { closeSearchPanel(view); return true; } else { openSearchPanel(view); return true; } };
 
 const editorThemeCompartment = new Compartment();
 
@@ -105,7 +106,11 @@ const editorView = new EditorView({
   }), parent: container
 });
 
-function getEditorText() { return editorView.state.doc.toString(); }
+let cachedText = null;
+function getEditorText() {
+  if (cachedText === null) cachedText = editorView.state.doc.toString();
+  return cachedText;
+}
 function setEditorText(text) { 
   editorView.dispatch({ changes: { from: 0, to: editorView.state.doc.length, insert: text.replace(/\r\n/g, '\n') } }); 
   // ★画面の描画を最優先させるため、重い解析処理を少しだけ遅延させる
@@ -215,13 +220,14 @@ let isSyncingLeft = false; let isSyncingRight = false;
 const edScroll = editorView.scrollDOM; 
 
 // ★横書きエディタ → 縦書きプレビュー の完全同期
+let syncLeftTimer = null, syncRightTimer = null;
 edScroll.addEventListener('scroll', () => {
   if (previewPane.classList.contains('hidden') || isSyncingLeft) return;
   isSyncingRight = true;
-  // エディタ画面の中央にある文字のインデックスを取得
   const pos = editorView.posAtCoords({ x: edScroll.getBoundingClientRect().left + 50, y: edScroll.getBoundingClientRect().top + (edScroll.clientHeight / 2) }, false);
   if (pos !== null) syncPreviewToPos(pos);
-  setTimeout(() => isSyncingRight = false, 50);
+  clearTimeout(syncRightTimer);
+  syncRightTimer = setTimeout(() => isSyncingRight = false, 50);
 });
 // ★縦書きプレビュー → 横書きエディタ の完全同期
 prScroll.addEventListener('scroll', () => {
@@ -238,7 +244,8 @@ prScroll.addEventListener('scroll', () => {
     const coords = editorView.coordsAtPos(pos);
     if (coords) edScroll.scrollTop += (coords.top - edScroll.getBoundingClientRect().top - (edScroll.clientHeight / 2));
   }
-  setTimeout(() => isSyncingLeft = false, 50);
+  clearTimeout(syncLeftTimer);
+  syncLeftTimer = setTimeout(() => isSyncingLeft = false, 50);
 });
 
 // ==============================
@@ -467,7 +474,25 @@ document.getElementById('btn-apply-theme').addEventListener('click', () => {
 });
 document.getElementById('btn-save-theme-slot').addEventListener('click', () => { const n = document.getElementById('select-theme-save').value; const t = { bg: document.getElementById('set-bg-color').value, mBg: document.getElementById('set-menu-bg').value, title: document.getElementById('set-titlebar-bg').value, text: document.getElementById('set-text-color').value, sel: document.getElementById('set-selection-color').value, hl: document.getElementById('set-highlight-color').value, tText: document.getElementById('set-titlebar-text').value, cText: document.getElementById('set-counter-color').value, aCol: document.getElementById('set-active-line-color').value }; localStorage.setItem(`theme-slot-${n}`, JSON.stringify(t)); alert(`スロット ${n} に保存しました`); });
 
+// 設定モーダルに関わる初期化はアイドル時 or 初回オープン時に遅延
+let settingsUiBuilt = false;
+function buildSettingsUiOnce() {
+  if (settingsUiBuilt) return;
+  settingsUiBuilt = true;
+
+  const frag = document.createDocumentFragment();
+  shortcutDefs.forEach(def => {
+    const d = shortcuts[def.id] || { mod: '', key: '' };
+    const div = document.createElement('div');
+    div.className = 'setting-group';
+    div.innerHTML = `<label>${def.label}</label><div class="shortcut-inputs">...</div>`;
+    frag.appendChild(div);
+  });
+  scContainer.appendChild(frag); // innerHTML += の代わりに1回だけDOM挿入
+}
+
 document.getElementById('menu-settings').addEventListener('click', () => {
+  buildSettingsUiOnce();
   dropdown.classList.add('hidden');
   document.getElementById('set-editor-font').value = currentSettings.editorFont; document.getElementById('set-ui-font').value = currentSettings.uiFont; document.getElementById('set-preview-font').value = currentSettings.previewFont || ""; document.getElementById('set-fs').value = currentSettings.fontSize; document.getElementById('set-lh').value = currentSettings.lh; document.getElementById('set-line-length').value = currentSettings.lineLength || 0;
   document.getElementById('set-typewriter').checked = currentSettings.typewriterMode; document.getElementById('set-active-line-enabled').checked = currentSettings.activeLineEnabled; document.getElementById('set-fade-enabled').checked = currentSettings.fadeEnabled; document.getElementById('set-fade-range-top').value = currentSettings.fadeRangeTop; document.getElementById('set-fade-range-bottom').value = currentSettings.fadeRangeBottom; document.getElementById('set-fade-opacity').value = currentSettings.fadeOpacity; document.getElementById('set-count-newline').checked = currentSettings.countNewline;
@@ -571,5 +596,28 @@ async function loadStartupFile() {
 // PCのアイドルを待たず、即座にファイルの読み込みを開始する
 setTimeout(() => loadStartupFile(), 0);
 
-const observer = new MutationObserver((mutations) => { mutations.forEach(m => { m.addedNodes.forEach(node => { if (node.nodeType === 1 && node.classList && node.classList.contains('cm-panels')) { const p = node.querySelector('.cm-search'); if (!p) return; const s = p.querySelector('input[name="search"]'), r = p.querySelector('input[name="replace"]'); if (s) s.setAttribute('autocomplete', 'off'); if (r) r.setAttribute('autocomplete', 'off'); p.querySelectorAll('label').forEach(l => { const t = (l.title || "").toLowerCase(); if (t.includes("case")) l.title = "大文字と小文字を区別する"; else if (t.includes("regexp") || t.includes("regular")) l.title = "正規表現を使用する"; else if (t.includes("word")) l.title = "単語単位で検索する"; }); } }); }); });
-observer.observe(document.body, { childList: true, subtree: true });
+
+const toggleSearchPanel = (view) => {
+  if (view.dom.querySelector('.cm-search')) {
+    closeSearchPanel(view);
+    return true;
+  }
+  openSearchPanel(view); // この時点でDOMにパネルが既に挿入されている
+  applySearchPanelLabels(view);
+  return true;
+};
+
+function applySearchPanelLabels(view) {
+  const p = view.dom.querySelector('.cm-search');
+  if (!p) return;
+  const s = p.querySelector('input[name="search"]');
+  const r = p.querySelector('input[name="replace"]');
+  if (s) s.setAttribute('autocomplete', 'off');
+  if (r) r.setAttribute('autocomplete', 'off');
+  p.querySelectorAll('label').forEach(l => {
+    const t = (l.title || "").toLowerCase();
+    if (t.includes("case")) l.title = "大文字と小文字を区別する";
+    else if (t.includes("regexp") || t.includes("regular")) l.title = "正規表現を使用する";
+    else if (t.includes("word")) l.title = "単語単位で検索する";
+  });
+}

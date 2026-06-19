@@ -6411,8 +6411,8 @@
     // update
     updateInner(changes, composition) {
       this.view.viewState.mustMeasureContent = true;
-      let { observer: observer2 } = this.view;
-      observer2.ignore(() => {
+      let { observer } = this.view;
+      observer.ignore(() => {
         if (composition || changes.length) {
           let oldTile = this.tile;
           let builder = new TileUpdate(this.view, oldTile, this.blockWrappers, this.decorations, this.dynamicDecorationMap);
@@ -6427,9 +6427,9 @@
         }
         this.tile.dom.style.height = this.view.viewState.contentHeight / this.view.scaleY + "px";
         this.tile.dom.style.flexBasis = this.minWidth ? this.minWidth + "px" : "";
-        let track = browser.chrome || browser.ios ? { node: observer2.selectionRange.focusNode, written: false } : void 0;
+        let track = browser.chrome || browser.ios ? { node: observer.selectionRange.focusNode, written: false } : void 0;
         this.tile.sync(track);
-        if (track && (track.written || observer2.selectionRange.focusNode != track.node || !this.tile.dom.contains(track.node)))
+        if (track && (track.written || observer.selectionRange.focusNode != track.node || !this.tile.dom.contains(track.node)))
           this.forceSelection = true;
         this.tile.dom.style.height = "";
       });
@@ -6439,7 +6439,7 @@
           if (child.isWidget() && child.widget instanceof BlockGapWidget)
             gaps.push(child.dom);
       }
-      observer2.updateGaps(gaps);
+      observer.updateGaps(gaps);
     }
     updateEditContextFormatting(update) {
       this.editContextFormatting = this.editContextFormatting.map(update.changes);
@@ -7815,8 +7815,8 @@
     runHandlers(type, event) {
       let handlers2 = this.handlers[type];
       if (handlers2) {
-        for (let observer2 of handlers2.observers)
-          observer2(this.view, event);
+        for (let observer of handlers2.observers)
+          observer(this.view, event);
         for (let handler of handlers2.handlers) {
           if (event.defaultPrevented)
             break;
@@ -17779,6 +17779,7 @@
   var typewriterLockedY = null;
   var combinedUpdateListener = EditorView.updateListener.of((update) => {
     if (update.docChanged) {
+      cachedText = null;
       setDirty(true);
       debouncedWordCount();
       updatePreviewContent();
@@ -17812,15 +17813,6 @@
     "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection": { backgroundColor: "var(--selection-color)" },
     ".cm-activeLine": { backgroundColor: "var(--active-line-color) !important" }
   });
-  var toggleSearchPanel = (view) => {
-    if (view.dom.querySelector(".cm-search")) {
-      closeSearchPanel(view);
-      return true;
-    } else {
-      openSearchPanel(view);
-      return true;
-    }
-  };
   var editorThemeCompartment = new Compartment();
   var editorView = new EditorView({
     state: EditorState.create({
@@ -17840,8 +17832,10 @@
     }),
     parent: container
   });
+  var cachedText = null;
   function getEditorText() {
-    return editorView.state.doc.toString();
+    if (cachedText === null) cachedText = editorView.state.doc.toString();
+    return cachedText;
   }
   function setEditorText(text) {
     editorView.dispatch({ changes: { from: 0, to: editorView.state.doc.length, insert: text.replace(/\r\n/g, "\n") } });
@@ -18062,12 +18056,15 @@
   var isSyncingLeft = false;
   var isSyncingRight = false;
   var edScroll = editorView.scrollDOM;
+  var syncLeftTimer = null;
+  var syncRightTimer = null;
   edScroll.addEventListener("scroll", () => {
     if (previewPane.classList.contains("hidden") || isSyncingLeft) return;
     isSyncingRight = true;
     const pos = editorView.posAtCoords({ x: edScroll.getBoundingClientRect().left + 50, y: edScroll.getBoundingClientRect().top + edScroll.clientHeight / 2 }, false);
     if (pos !== null) syncPreviewToPos(pos);
-    setTimeout(() => isSyncingRight = false, 50);
+    clearTimeout(syncRightTimer);
+    syncRightTimer = setTimeout(() => isSyncingRight = false, 50);
   });
   prScroll.addEventListener("scroll", () => {
     if (previewPane.classList.contains("hidden") || isSyncingRight) return;
@@ -18087,7 +18084,8 @@
       const coords = editorView.coordsAtPos(pos);
       if (coords) edScroll.scrollTop += coords.top - edScroll.getBoundingClientRect().top - edScroll.clientHeight / 2;
     }
-    setTimeout(() => isSyncingLeft = false, 50);
+    clearTimeout(syncLeftTimer);
+    syncLeftTimer = setTimeout(() => isSyncingLeft = false, 50);
   });
   function getRegexList(level) {
     const ids = currentSettings.olLevels[level] || [];
@@ -18528,7 +18526,22 @@ ${err}`, { type: "error" });
     localStorage.setItem(`theme-slot-${n}`, JSON.stringify(t2));
     alert(`\u30B9\u30ED\u30C3\u30C8 ${n} \u306B\u4FDD\u5B58\u3057\u307E\u3057\u305F`);
   });
+  var settingsUiBuilt = false;
+  function buildSettingsUiOnce() {
+    if (settingsUiBuilt) return;
+    settingsUiBuilt = true;
+    const frag = document.createDocumentFragment();
+    shortcutDefs.forEach((def) => {
+      const d = shortcuts[def.id] || { mod: "", key: "" };
+      const div = document.createElement("div");
+      div.className = "setting-group";
+      div.innerHTML = `<label>${def.label}</label><div class="shortcut-inputs">...</div>`;
+      frag.appendChild(div);
+    });
+    scContainer.appendChild(frag);
+  }
   document.getElementById("menu-settings").addEventListener("click", () => {
+    buildSettingsUiOnce();
     dropdown.classList.add("hidden");
     document.getElementById("set-editor-font").value = currentSettings.editorFont;
     document.getElementById("set-ui-font").value = currentSettings.uiFont;
@@ -18750,24 +18763,27 @@ ${err}`, { type: "error" });
     }
   }
   setTimeout(() => loadStartupFile(), 0);
-  var observer = new MutationObserver((mutations) => {
-    mutations.forEach((m) => {
-      m.addedNodes.forEach((node) => {
-        if (node.nodeType === 1 && node.classList && node.classList.contains("cm-panels")) {
-          const p = node.querySelector(".cm-search");
-          if (!p) return;
-          const s = p.querySelector('input[name="search"]'), r = p.querySelector('input[name="replace"]');
-          if (s) s.setAttribute("autocomplete", "off");
-          if (r) r.setAttribute("autocomplete", "off");
-          p.querySelectorAll("label").forEach((l) => {
-            const t2 = (l.title || "").toLowerCase();
-            if (t2.includes("case")) l.title = "\u5927\u6587\u5B57\u3068\u5C0F\u6587\u5B57\u3092\u533A\u5225\u3059\u308B";
-            else if (t2.includes("regexp") || t2.includes("regular")) l.title = "\u6B63\u898F\u8868\u73FE\u3092\u4F7F\u7528\u3059\u308B";
-            else if (t2.includes("word")) l.title = "\u5358\u8A9E\u5358\u4F4D\u3067\u691C\u7D22\u3059\u308B";
-          });
-        }
-      });
+  var toggleSearchPanel = (view) => {
+    if (view.dom.querySelector(".cm-search")) {
+      closeSearchPanel(view);
+      return true;
+    }
+    openSearchPanel(view);
+    applySearchPanelLabels(view);
+    return true;
+  };
+  function applySearchPanelLabels(view) {
+    const p = view.dom.querySelector(".cm-search");
+    if (!p) return;
+    const s = p.querySelector('input[name="search"]');
+    const r = p.querySelector('input[name="replace"]');
+    if (s) s.setAttribute("autocomplete", "off");
+    if (r) r.setAttribute("autocomplete", "off");
+    p.querySelectorAll("label").forEach((l) => {
+      const t2 = (l.title || "").toLowerCase();
+      if (t2.includes("case")) l.title = "\u5927\u6587\u5B57\u3068\u5C0F\u6587\u5B57\u3092\u533A\u5225\u3059\u308B";
+      else if (t2.includes("regexp") || t2.includes("regular")) l.title = "\u6B63\u898F\u8868\u73FE\u3092\u4F7F\u7528\u3059\u308B";
+      else if (t2.includes("word")) l.title = "\u5358\u8A9E\u5358\u4F4D\u3067\u691C\u7D22\u3059\u308B";
     });
-  });
-  observer.observe(document.body, { childList: true, subtree: true });
+  }
 })();
