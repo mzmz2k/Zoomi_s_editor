@@ -18215,10 +18215,6 @@
   }
   document.getElementById("btn-outline-refresh").addEventListener("click", parseOutlineAndBookmarks);
   var scContainer = document.getElementById("shortcut-list-container");
-  shortcutDefs.forEach((def) => {
-    const d = shortcuts[def.id] || { mod: "", key: "" };
-    scContainer.innerHTML += `<div class="setting-group"><label>${def.label}</label><div class="shortcut-inputs"><select id="mod-${def.id}"><option value="" ${d.mod === "" ? "selected" : ""}>\u306A\u3057</option><option value="ctrlKey" ${d.mod === "ctrlKey" ? "selected" : ""}>Ctrl</option><option value="shiftKey" ${d.mod === "shiftKey" ? "selected" : ""}>Shift</option><option value="altKey" ${d.mod === "altKey" ? "selected" : ""}>Alt</option></select><span>+</span><input type="text" id="key-${def.id}" value="${d.key}" maxlength="1"></div></div>`;
-  });
   function renderOutlineSettings() {
     const box = document.getElementById("ol-levels-container");
     box.innerHTML = "";
@@ -18526,22 +18522,7 @@ ${err}`, { type: "error" });
     localStorage.setItem(`theme-slot-${n}`, JSON.stringify(t2));
     alert(`\u30B9\u30ED\u30C3\u30C8 ${n} \u306B\u4FDD\u5B58\u3057\u307E\u3057\u305F`);
   });
-  var settingsUiBuilt = false;
-  function buildSettingsUiOnce() {
-    if (settingsUiBuilt) return;
-    settingsUiBuilt = true;
-    const frag = document.createDocumentFragment();
-    shortcutDefs.forEach((def) => {
-      const d = shortcuts[def.id] || { mod: "", key: "" };
-      const div = document.createElement("div");
-      div.className = "setting-group";
-      div.innerHTML = `<label>${def.label}</label><div class="shortcut-inputs">...</div>`;
-      frag.appendChild(div);
-    });
-    scContainer.appendChild(frag);
-  }
   document.getElementById("menu-settings").addEventListener("click", () => {
-    buildSettingsUiOnce();
     dropdown.classList.add("hidden");
     document.getElementById("set-editor-font").value = currentSettings.editorFont;
     document.getElementById("set-ui-font").value = currentSettings.uiFont;
@@ -18749,20 +18730,48 @@ ${err}`, { type: "error" });
     const openPath = new URLSearchParams(window.location.search).get("open");
     if (openPath) {
       await openFileDirect(openPath);
-      return;
-    }
-    try {
-      const data = await invoke("get_startup_file");
-      if (data) {
-        setEditorText(data.content);
-        currentFilePath = data.path;
-        setDirty(false);
-        updateWordCount();
+    } else {
+      try {
+        const data = await invoke("get_startup_file");
+        if (data) {
+          setEditorText(data.content);
+          currentFilePath = data.path;
+          setDirty(false);
+          updateWordCount();
+        }
+      } catch (err) {
       }
-    } catch (err) {
     }
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      invoke("show_main_window").catch(() => {
+      });
+    }));
   }
   setTimeout(() => loadStartupFile(), 0);
+  function buildShortcutList() {
+    scContainer.innerHTML = "";
+    const frag = document.createDocumentFragment();
+    shortcutDefs.forEach((def) => {
+      const d = shortcuts[def.id] || { mod: "", key: "" };
+      const div = document.createElement("div");
+      div.className = "setting-group";
+      div.innerHTML = `
+      <label>${def.label}</label>
+      <div class="shortcut-inputs">
+        <select id="mod-${def.id}">
+          <option value="" ${d.mod === "" ? "selected" : ""}>\u306A\u3057</option>
+          <option value="ctrlKey" ${d.mod === "ctrlKey" ? "selected" : ""}>Ctrl</option>
+          <option value="shiftKey" ${d.mod === "shiftKey" ? "selected" : ""}>Shift</option>
+          <option value="altKey" ${d.mod === "altKey" ? "selected" : ""}>Alt</option>
+        </select>
+        <span>+</span>
+        <input type="text" id="key-${def.id}" value="${d.key}" maxlength="1">
+      </div>`;
+      frag.appendChild(div);
+    });
+    scContainer.appendChild(frag);
+  }
+  buildShortcutList();
   var toggleSearchPanel = (view) => {
     if (view.dom.querySelector(".cm-search")) {
       closeSearchPanel(view);

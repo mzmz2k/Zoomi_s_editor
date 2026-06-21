@@ -357,10 +357,6 @@ document.getElementById('btn-outline-refresh').addEventListener('click', parseOu
 // 🌟 設定画面のUIロジック
 // ==============================
 const scContainer = document.getElementById('shortcut-list-container');
-shortcutDefs.forEach(def => {
-  const d = shortcuts[def.id] || { mod: '', key: '' };
-  scContainer.innerHTML += `<div class="setting-group"><label>${def.label}</label><div class="shortcut-inputs"><select id="mod-${def.id}"><option value="" ${d.mod===''?'selected':''}>なし</option><option value="ctrlKey" ${d.mod==='ctrlKey'?'selected':''}>Ctrl</option><option value="shiftKey" ${d.mod==='shiftKey'?'selected':''}>Shift</option><option value="altKey" ${d.mod==='altKey'?'selected':''}>Alt</option></select><span>+</span><input type="text" id="key-${def.id}" value="${d.key}" maxlength="1"></div></div>`;
-});
 
 function renderOutlineSettings() {
   const box = document.getElementById('ol-levels-container'); box.innerHTML = '';
@@ -474,25 +470,8 @@ document.getElementById('btn-apply-theme').addEventListener('click', () => {
 });
 document.getElementById('btn-save-theme-slot').addEventListener('click', () => { const n = document.getElementById('select-theme-save').value; const t = { bg: document.getElementById('set-bg-color').value, mBg: document.getElementById('set-menu-bg').value, title: document.getElementById('set-titlebar-bg').value, text: document.getElementById('set-text-color').value, sel: document.getElementById('set-selection-color').value, hl: document.getElementById('set-highlight-color').value, tText: document.getElementById('set-titlebar-text').value, cText: document.getElementById('set-counter-color').value, aCol: document.getElementById('set-active-line-color').value }; localStorage.setItem(`theme-slot-${n}`, JSON.stringify(t)); alert(`スロット ${n} に保存しました`); });
 
-// 設定モーダルに関わる初期化はアイドル時 or 初回オープン時に遅延
-let settingsUiBuilt = false;
-function buildSettingsUiOnce() {
-  if (settingsUiBuilt) return;
-  settingsUiBuilt = true;
-
-  const frag = document.createDocumentFragment();
-  shortcutDefs.forEach(def => {
-    const d = shortcuts[def.id] || { mod: '', key: '' };
-    const div = document.createElement('div');
-    div.className = 'setting-group';
-    div.innerHTML = `<label>${def.label}</label><div class="shortcut-inputs">...</div>`;
-    frag.appendChild(div);
-  });
-  scContainer.appendChild(frag); // innerHTML += の代わりに1回だけDOM挿入
-}
 
 document.getElementById('menu-settings').addEventListener('click', () => {
-  buildSettingsUiOnce();
   dropdown.classList.add('hidden');
   document.getElementById('set-editor-font').value = currentSettings.editorFont; document.getElementById('set-ui-font').value = currentSettings.uiFont; document.getElementById('set-preview-font').value = currentSettings.previewFont || ""; document.getElementById('set-fs').value = currentSettings.fontSize; document.getElementById('set-lh').value = currentSettings.lh; document.getElementById('set-line-length').value = currentSettings.lineLength || 0;
   document.getElementById('set-typewriter').checked = currentSettings.typewriterMode; document.getElementById('set-active-line-enabled').checked = currentSettings.activeLineEnabled; document.getElementById('set-fade-enabled').checked = currentSettings.fadeEnabled; document.getElementById('set-fade-range-top').value = currentSettings.fadeRangeTop; document.getElementById('set-fade-range-bottom').value = currentSettings.fadeRangeBottom; document.getElementById('set-fade-opacity').value = currentSettings.fadeOpacity; document.getElementById('set-count-newline').checked = currentSettings.countNewline;
@@ -590,11 +569,46 @@ document.getElementById('menu-add-folder').addEventListener('click', (e) => { e.
 renderRegisteredPaths();
 
 async function loadStartupFile() {
-  const openPath = new URLSearchParams(window.location.search).get('open'); if (openPath) { await openFileDirect(openPath); return; }
-  try { const data = await invoke('get_startup_file'); if (data) { setEditorText(data.content); currentFilePath = data.path; setDirty(false); updateWordCount(); } } catch (err) {}
+  const openPath = new URLSearchParams(window.location.search).get('open');
+  if (openPath) {
+    await openFileDirect(openPath);
+  } else {
+    try {
+      const data = await invoke('get_startup_file');
+      if (data) { setEditorText(data.content); currentFilePath = data.path; setDirty(false); updateWordCount(); }
+    } catch (err) {}
+  }
+  // ★ファイル読み込み・描画が終わったタイミングでウィンドウを表示
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    invoke('show_main_window').catch(() => {});
+  }));
 }
-// PCのアイドルを待たず、即座にファイルの読み込みを開始する
 setTimeout(() => loadStartupFile(), 0);
+
+function buildShortcutList() {
+  scContainer.innerHTML = ''; // ★これを追加：必ず空にしてから作る
+  const frag = document.createDocumentFragment();
+  shortcutDefs.forEach(def => {
+    const d = shortcuts[def.id] || { mod: '', key: '' };
+    const div = document.createElement('div');
+    div.className = 'setting-group';
+    div.innerHTML = `
+      <label>${def.label}</label>
+      <div class="shortcut-inputs">
+        <select id="mod-${def.id}">
+          <option value="" ${d.mod===''?'selected':''}>なし</option>
+          <option value="ctrlKey" ${d.mod==='ctrlKey'?'selected':''}>Ctrl</option>
+          <option value="shiftKey" ${d.mod==='shiftKey'?'selected':''}>Shift</option>
+          <option value="altKey" ${d.mod==='altKey'?'selected':''}>Alt</option>
+        </select>
+        <span>+</span>
+        <input type="text" id="key-${def.id}" value="${d.key}" maxlength="1">
+      </div>`;
+    frag.appendChild(div);
+  });
+  scContainer.appendChild(frag);
+}
+buildShortcutList(); // 起動時に1回呼ぶだけにする
 
 
 const toggleSearchPanel = (view) => {
