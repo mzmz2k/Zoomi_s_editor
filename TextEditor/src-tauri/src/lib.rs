@@ -21,7 +21,31 @@ fn get_startup_file() -> Option<serde_json::Value> {
 
 #[tauri::command]
 fn save_file_direct(path: String, content: String) -> Result<(), String> {
-    std::fs::write(&path, content).map_err(|e| e.to_string())
+    let path_buf = std::path::PathBuf::from(&path);
+    let mut temp_path = path_buf.clone();
+    
+    // 重複を避けるため、現在時刻（マイクロ秒）を使って一時ファイル名を生成
+    let time = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_micros())
+        .unwrap_or(0);
+    
+    let file_name = path_buf.file_name().unwrap_or_default().to_string_lossy();
+    let temp_name = format!("{}.{}.tmp", file_name, time);
+    temp_path.set_file_name(temp_name);
+
+    // 1. まず一時ファイルに書き込む（ここで失敗しても元のファイルは無事）
+    std::fs::write(&temp_path, &content).map_err(|e| e.to_string())?;
+
+    // 2. 一時ファイルを本来のファイル名にリネーム（OSレベルでアトミックに置換される）
+    match std::fs::rename(&temp_path, &path_buf) {
+        Ok(_) => Ok(()),
+        Err(e) => {
+            // リネームに失敗した場合はゴミを残さないよう一時ファイルを削除
+            let _ = std::fs::remove_file(&temp_path);
+            Err(format!("アトミック保存に失敗しました: {}", e))
+        }
+    }
 }
 
 #[tauri::command]
