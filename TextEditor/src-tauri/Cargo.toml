@@ -1,6 +1,6 @@
 [package]
 name = "DraftEditor"
-version = "1.4.5"
+version = "1.4.6"
 description = "小説執筆にも使えるシンプルなテキストエディタ"
 authors = ["Nez"]
 edition = "2021"
