@@ -3,19 +3,40 @@ import { EditorState, Compartment } from "@codemirror/state";
 import { defaultKeymap, history, historyKeymap, insertNewline } from "@codemirror/commands"; 
 import { search, searchKeymap, openSearchPanel, closeSearchPanel } from "@codemirror/search"; 
 import { highlightActiveLine } from "@codemirror/view"; 
+import { SaveManager } from "./save.js";
 
 const u = String.fromCharCode(95); const tauriKey = u + u + "TAURI" + u + u;
 const { save, open, message, ask } = window[tauriKey].dialog; const { getCurrentWindow } = window[tauriKey].window;
-const { writeTextFile, readTextFile, readFile, readBinaryFile, readDir, remove, mkdir } = window[tauriKey].fs; const { invoke } = window[tauriKey].core;
+const { stat, writeTextFile, readTextFile, readFile, readBinaryFile, readDir, remove, mkdir } = window[tauriKey].fs; const { invoke } = window[tauriKey].core;
 const WebviewWindow = window[tauriKey].webviewWindow?.WebviewWindow;
 
 const appWindow = getCurrentWindow(); const container = document.getElementById('editor-container');
 const wordCounter = document.getElementById('word-counter'); const fileNameDisplay = document.getElementById('file-name');
 
 let currentFilePath = null; let isDirty = false;
+
+const saveManager = new SaveManager({
+  fs: { stat, readDir, mkdir, remove },
+  dialog: { save, ask, message },
+  invoke,
+  getEditorText: () => getEditorText(),
+  getSettings: () => currentSettings,
+  onSaveSuccess: (path, isAutoSave = false) => {
+    currentFilePath = path;
+    setDirty(false);
+    if (!isAutoSave) {
+      wordCounter.textContent = '保存しました';
+      setTimeout(() => updateWordCount(), 2000);
+    }
+    parseOutlineAndBookmarks();
+  }
+});
+saveManager.startAutoSave(() => isDirty);
+
+
 function hexToRgba(hex, alpha) { let r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16); return `rgba(${r}, ${g}, ${b}, ${alpha})`; }
 function debounce(func, wait) { let timeout; return function(...args) { clearTimeout(timeout); timeout = setTimeout(() => func.apply(this, args), wait); }; }
-async function writeTextFileDirect(path, content) { return await invoke('save_file_direct', { path, content }); }
+
 function setDirty(val) { 
   if (isDirty !== val) { 
     isDirty = val; 
@@ -25,7 +46,7 @@ function setDirty(val) {
   } 
 }
 
-document.getElementById('titlebar-close').addEventListener('click', async () => { if (currentFilePath && isDirty) { try { await createBackup(); await appWindow.destroy(); } catch (err) { const yes = await ask(`バックアップ失敗。\n終了しますか？`, { type: 'error' }); if (yes) await appWindow.destroy(); } } else { await appWindow.destroy(); } });
+document.getElementById('titlebar-close').addEventListener('click', async () => { if (currentFilePath && isDirty) { try { await saveManager.createBackup(); await appWindow.destroy(); } catch (err) { const yes = await ask(`バックアップ失敗。\n終了しますか？`, { type: 'error' }); if (yes) await appWindow.destroy(); } } else { await appWindow.destroy(); } });
 document.getElementById('titlebar-minimize').addEventListener('click', () => appWindow.minimize());
 document.getElementById('titlebar-maximize').addEventListener('click', async () => { if (await appWindow.isMaximized()) appWindow.unmaximize(); else appWindow.maximize(); });
 
@@ -407,6 +428,7 @@ async function openFileDirect(filePath) {
     
     // ★ここで setEditorText が呼ばれ、その中で遅延して目次解析されるので、ここでの二重呼び出しは削除
     setEditorText(text); currentFilePath = filePath; setDirty(false); updateWordCount(); 
+    await saveManager.updateLastModifiedTime(filePath);
     
   } catch (err) { 
     await message(`開けません。\n${err}`, { type: 'error' }); 
@@ -414,7 +436,7 @@ async function openFileDirect(filePath) {
 }
 
 async function openFile() { const filePath = await open({ filters: [{ name: 'Text', extensions: ['txt', 'md'] }] }); if (filePath) isDirty ? createNewWindow(filePath) : await openFileDirect(filePath); }
-let isSaving = false; async function saveFile(isSaveAs) { if (isSaving) return; isSaving = true; try { if (!currentFilePath || isSaveAs) { const filePath = await save({ filters: [{ name: 'Text', extensions: ['txt', 'md'] }] }); if (!filePath) return; currentFilePath = filePath; } await writeTextFileDirect(currentFilePath, getEditorText()); setDirty(false); wordCounter.textContent = '保存しました'; setTimeout(() => updateWordCount(), 2000); parseOutlineAndBookmarks(); } catch (err) { await message(`保存失敗。\n${err}`, { type: 'error' }); } finally { isSaving = false; } }
+
 
 document.addEventListener('keydown', async (e) => {
   if (e.isComposing || e.keyCode === 229) return;
@@ -429,8 +451,8 @@ document.addEventListener('keydown', async (e) => {
   if (check('sc-text1')) { e.preventDefault(); loadTextSlotData(1); } if (check('sc-text2')) { e.preventDefault(); loadTextSlotData(2); } if (check('sc-text3')) { e.preventDefault(); loadTextSlotData(3); }
   if (check('sc-theme1')) { e.preventDefault(); loadThemeSlotData(1); } if (check('sc-theme2')) { e.preventDefault(); loadThemeSlotData(2); } if (check('sc-theme3')) { e.preventDefault(); loadThemeSlotData(3); }
 
-  if (e.ctrlKey && !e.shiftKey && e.key.toLowerCase() === 's') { e.preventDefault(); await saveFile(false); }
-  if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 's') { e.preventDefault(); await saveFile(true); }
+  if (e.ctrlKey && !e.shiftKey && e.key.toLowerCase() === 's') { e.preventDefault(); await saveManager.saveFile(false); }
+  if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 's') { e.preventDefault(); await saveManager.saveFile(true); }
   if (e.ctrlKey && e.key.toLowerCase() === 'o') { e.preventDefault(); await openFile(); }
   if (e.ctrlKey && e.key.toLowerCase() === 'n') { e.preventDefault(); createNewWindow(); }
 });
@@ -444,7 +466,7 @@ appWindow.onFocusChanged(({ payload: focused }) => {
 
 const dropdown = document.getElementById('dropdown-menu'), modal = document.getElementById('settings-modal');
 document.getElementById('btn-menu').addEventListener('click', () => dropdown.classList.toggle('hidden')); document.addEventListener('click', (e) => { if (!document.getElementById('btn-menu').contains(e.target) && !dropdown.contains(e.target)) dropdown.classList.add('hidden'); });
-document.getElementById('menu-new').addEventListener('click', () => { dropdown.classList.add('hidden'); createNewWindow(); }); document.getElementById('menu-open').addEventListener('click', () => { dropdown.classList.add('hidden'); openFile(); }); document.getElementById('menu-save').addEventListener('click', () => { dropdown.classList.add('hidden'); saveFile(false); }); document.getElementById('menu-save-as').addEventListener('click', () => { dropdown.classList.add('hidden'); saveFile(true); });
+document.getElementById('menu-new').addEventListener('click', () => { dropdown.classList.add('hidden'); createNewWindow(); }); document.getElementById('menu-open').addEventListener('click', () => { dropdown.classList.add('hidden'); openFile(); }); document.getElementById('menu-save').addEventListener('click', () => { dropdown.classList.add('hidden'); saveManager.saveFile(false); }); document.getElementById('menu-save-as').addEventListener('click', () => { dropdown.classList.add('hidden'); saveManager.saveFile(true); });
 document.querySelectorAll('.tab-btn').forEach(btn => { btn.addEventListener('click', () => { document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden')); btn.classList.add('active'); document.getElementById('tab-' + btn.dataset.tab).classList.remove('hidden'); }); });
 
 function updateTextSlotPreview() {
@@ -497,8 +519,8 @@ document.getElementById('btn-close-settings').addEventListener('click', () => mo
 // バックアップ＆その他
 document.getElementById('btn-select-backup-dir').addEventListener('click', async () => { const s = await open({ directory: true }); if (s) { document.getElementById('display-backup-dir').textContent = s; document.getElementById('display-backup-dir').dataset.path = s; }});
 document.getElementById('btn-clear-backup-dir').addEventListener('click', () => { document.getElementById('display-backup-dir').textContent = "未設定 (ファイルと同じ場所に/backupを作成)"; document.getElementById('display-backup-dir').dataset.path = ""; });
-setInterval(async () => { if (currentSettings.autoSaveEnabled && currentFilePath && isDirty) { try { await writeTextFileDirect(currentFilePath, getEditorText()); setDirty(false); parseOutlineAndBookmarks(); } catch (err) {} } }, 60000);
-async function createBackup() { if (!currentSettings.backupEnabled) return; let backupDir = currentSettings.backupDir; let safePath = currentFilePath.split(/[/\\]/).join('/'); const lastSlash = safePath.lastIndexOf('/'); const fileName = safePath.substring(lastSlash + 1); const dotIndex = fileName.lastIndexOf('.'); const nameWithoutExt = dotIndex !== -1 ? fileName.substring(0, dotIndex) : fileName; const ext = dotIndex !== -1 ? fileName.substring(dotIndex) : ''; if (!backupDir) { backupDir = safePath.substring(0, lastSlash) + "/backup"; } try { await mkdir(backupDir); } catch (err) {} const now = new Date(); const timestamp = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}-${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}${String(now.getSeconds()).padStart(2,'0')}`; await writeTextFileDirect(`${backupDir}/${nameWithoutExt}-backup-${timestamp}${ext}`, getEditorText()); try { const files = await readDir(backupDir); const backups = files.filter(f => f.name && f.name.indexOf(nameWithoutExt + "-backup-") === 0).sort((a, b) => b.name.localeCompare(a.name)); if (backups.length > 5) { for (let i = 5; i < backups.length; i++) { await remove(backupDir + "/" + backups[i].name); } } } catch (err) {} }
+
+
 document.addEventListener('wheel', (e) => { if (e.ctrlKey) { e.preventDefault(); currentSettings.fontSize += e.deltaY < 0 ? 1 : -1; currentSettings.fontSize = Math.max(8, Math.min(120, currentSettings.fontSize)); applySettingsToStyle(); debounce(saveAllSettings, 500)(); } }, { passive: false });
 
 function renderRegisteredPaths() {
@@ -575,7 +597,13 @@ async function loadStartupFile() {
   } else {
     try {
       const data = await invoke('get_startup_file');
-      if (data) { setEditorText(data.content); currentFilePath = data.path; setDirty(false); updateWordCount(); }
+      if (data) { 
+        setEditorText(data.content); 
+        currentFilePath = data.path; 
+        setDirty(false); 
+        updateWordCount(); 
+        await saveManager.updateLastModifiedTime(data.path);
+      }
     } catch (err) {}
   }
   // ★ファイル読み込み・描画が終わったタイミングでウィンドウを表示
