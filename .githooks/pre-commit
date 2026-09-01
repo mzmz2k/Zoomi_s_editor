@@ -1,0 +1,9 @@
+#!/bin/sh
+
+# 1. ドキュメント生成スクリプトを実行
+node scripts/generate_filemap.js
+
+# 2. 生成されたファイルをコミットに含める
+git add docs/02_file-map.md
+
+

@@ -1,0 +1,19 @@
+#!/bin/sh
+echo "🚀 Running pre-push tests..."
+
+# 1. フロントエンド (Vitest) の単体テストをシングルプールで高速実行
+npx vitest run
+if [ $? -ne 0 ]; then
+    echo "❌ フロントエンドのテストに失敗したため、プッシュを中止しました。"
+    exit 1
+fi
+
+# 2. バックエンド (Rust) のテストも実行
+cd src-tauri && cargo test
+if [ $? -ne 0 ]; then
+    echo "❌ Rustのテストに失敗したため、プッシュを中止しました。"
+    exit 1
+fi
+
+echo "✅ すべてのテストが通過しました！プッシュを継続します。"
+exit 0
