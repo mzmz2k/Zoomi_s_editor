@@ -117,7 +117,6 @@ ZoomisEditor/
   - `export function renderOutlineSettings()`
   - `export function updateTextSlotPreview()`
   - `export function loadTextSlotData(n)`
-  - `export function buildShortcutList()`
 
 ### src-tauri/
 - `src-tauri/build.rs` : （説明未記載）

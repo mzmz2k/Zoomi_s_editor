@@ -225,32 +225,6 @@ function applyThemePreset(p) {
   document.getElementById('set-active-line-color').value = p.actCol;
 }
 
-export function buildShortcutList() {
-  const scContainer = document.getElementById('shortcut-list-container');
-  if (!scContainer) return;
-  scContainer.innerHTML = '';
-  const frag = document.createDocumentFragment();
-  shortcutDefs.forEach(def => {
-    const d = shortcuts[def.id] || { mod: '', key: '' };
-    const div = document.createElement('div');
-    div.className = 'setting-group';
-    div.innerHTML = `
-      <label>${def.label}</label>
-      <div class="shortcut-inputs">
-        <select id="mod-${def.id}">
-          <option value="" ${d.mod===''?'selected':''}>なし</option>
-          <option value="ctrlKey" ${d.mod==='ctrlKey'?'selected':''}>Ctrl</option>
-          <option value="shiftKey" ${d.mod==='shiftKey'?'selected':''}>Shift</option>
-          <option value="altKey" ${d.mod==='altKey'?'selected':''}>Alt</option>
-        </select>
-        <span>+</span>
-        <input type="text" id="key-${def.id}" value="${d.key}" maxlength="1">
-      </div>`;
-    frag.appendChild(div);
-  });
-  scContainer.appendChild(frag);
-}
-
 function setupSettingsModalEvents() {
   const dropdown = document.getElementById('dropdown-menu');
   const modal = document.getElementById('settings-modal');
