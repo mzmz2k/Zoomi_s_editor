@@ -414,19 +414,8 @@ async function createNewWindow(initialFilePath = null) { if (!WebviewWindow) ret
 
 async function openFileDirect(filePath) { 
   try { 
-    let text = "";
-    const readBin = readFile || readBinaryFile; 
-    
-    if (readBin) {
-      const bytes = await readBin(filePath);
-      try {
-        text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
-      } catch (e) {
-        text = new TextDecoder('shift-jis').decode(bytes);
-      }
-    } else {
-      text = await readTextFile(filePath); 
-    }
+    // ★ Rust側でファイル読み込みとエンコーディング解決を行う
+    const text = await invoke('read_file_text', { path: filePath });
     
     // ★ここで setEditorText が呼ばれ、その中で遅延して目次解析されるので、ここでの二重呼び出しは削除
     setEditorText(text); currentFilePath = filePath; setDirty(false); updateWordCount(); 

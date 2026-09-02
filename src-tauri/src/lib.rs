@@ -1,4 +1,23 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
+
+use std::fs;
+
+#[tauri::command]
+fn read_file_text(path: String) -> Result<String, String> {
+    // ファイルをバイナリとして読み込む
+    let bytes = fs::read(&path).map_err(|e| e.to_string())?;
+    
+    // まずUTF-8としてデコードを試みる
+    match String::from_utf8(bytes.clone()) {
+        Ok(text) => Ok(text),
+        Err(_) => {
+            // UTF-8で失敗した場合、Shift-JISとしてデコードする
+            let (cow, _encoding_used, _had_errors) = encoding_rs::SHIFT_JIS.decode(&bytes);
+            Ok(cow.into_owned())
+        }
+    }
+}
+
 #[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
@@ -85,6 +104,7 @@ pub fn run() {
             greet,
             get_startup_file,
             get_file_mtime,
+            read_file_text,
             save_file_direct,
             show_main_window
 
