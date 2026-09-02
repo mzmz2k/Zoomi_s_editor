@@ -22,6 +22,7 @@ ZoomisEditor/
 │   ├── bundle.js
 │   ├── dialog.js
 │   ├── index.html
+│   ├── layout.js
 │   ├── main.js
 │   ├── outline.js
 │   ├── save.js
@@ -70,6 +71,7 @@ ZoomisEditor/
   └── import ./dialog.js
   └── import ./outline.js
   └── import ./settings.js
+  └── import ./layout.js
 
 📄 `src/save.test.js`
   └── import vitest
@@ -88,6 +90,13 @@ ZoomisEditor/
 - `src/bundle.js` : （説明未記載）
 - `src/dialog.js` : HTMLベースのカスタムダイアログの表示・非表示を管理するモジュール
   - `export function showConflictDialog()`
+- `src/layout.js` : src/layout.js
+  - `export function initLayout(options)`
+  - `export function toggleOutline()`
+  - `export function setPreviewState(state)`
+  - `export function cyclePreview()`
+  - `export function syncPreviewToPos(pos)`
+  - `export const updatePreviewContent`
 - `src/main.js` : （説明未記載）
 - `src/outline.js` : アウトライン（目次）とブックマークの解析・DOM構築を行うモジュール
   - `export function initOutline(editorView, getSettings, defaultPresets, messageFn)`
