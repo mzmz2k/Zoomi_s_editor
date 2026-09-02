@@ -1,5 +1,4 @@
-/**
- * HTMLベースのカスタムダイアログの表示・非表示を管理するモジュール
+/* HTMLベースのカスタムダイアログの表示・非表示を管理するモジュール
  */
 export function showConflictDialog() {
   return new Promise((resolve) => {

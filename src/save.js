@@ -1,6 +1,4 @@
-// src/save.js
-/**
- * ファイル保存、自動保存、バックアップ、および競合検知を担当するモジュール
+/*ファイル保存、自動保存、バックアップ、および競合検知を担当するモジュール
  */
 export class SaveManager {
   constructor({ fs, dialog, invoke, getEditorText, getSettings, onSaveSuccess }) {

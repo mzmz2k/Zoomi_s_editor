@@ -86,16 +86,16 @@ ZoomisEditor/
 
 ### src/
 - `src/bundle.js` : （説明未記載）
-- `src/dialog.js` : *
+- `src/dialog.js` : HTMLベースのカスタムダイアログの表示・非表示を管理するモジュール
   - `export function showConflictDialog()`
 - `src/main.js` : （説明未記載）
-- `src/outline.js` : *
+- `src/outline.js` : アウトライン（目次）とブックマークの解析・DOM構築を行うモジュール
   - `export function initOutline(editorView, getSettings, defaultPresets, messageFn)`
   - `export function parseOutlineAndBookmarks()`
-- `src/save.js` : src/save.js
+- `src/save.js` : ファイル保存、自動保存、バックアップ、および競合検知を担当するモジュール
   - `export class SaveManager`
 - `src/save.test.js` : （説明未記載）
-- `src/settings.js` : *
+- `src/settings.js` : 設定・テーマ・ショートカットの管理および設定画面UIモジュール
   - `export const defaultPresets`
   - `export const shortcutDefs`
   - `export const currentSettings`
