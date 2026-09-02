@@ -118,40 +118,35 @@ export function initSettingsUI(options) {
 }
 
 export function renderOutlineSettings() {
-  const box = document.getElementById('ol-levels-container');
-  if (!box) return;
-  box.innerHTML = '';
+
+  // ① セレクトボックスの選択肢（プリセット＋カスタム）を更新
   [1, 2, 3].forEach(lv => {
-    const row = document.createElement('div');
-    row.className = 'setting-column';
-    let html = `<label>階層 ${lv}</label><div style="display:flex; flex-wrap:wrap; margin-bottom:4px;">`;
-    (currentSettings.olLevels[lv] || []).forEach(id => {
-      let name = id.startsWith('pre_') ? defaultPresets.find(p=>p.id===id)?.name : currentSettings.olCustoms[id.replace('cus_','')]?.n;
-      html += `<span class="ol-chip">${name} <span class="ol-chip-del" data-lv="${lv}" data-id="${id}">×</span></span>`;
-    });
-    html += `</div><div style="display:flex; gap:4px; width:100%;"><select id="sel-add-lv${lv}" style="flex:1;">`;
-    defaultPresets.forEach(p => html += `<option value="${p.id}">${p.name}</option>`);
-    [1,2,3,4,5,6].forEach(c => html += `<option value="cus_${c}">${currentSettings.olCustoms[c].n}</option>`);
-    html += `</select><button class="btn btn-add-lv" data-lv="${lv}" style="padding:2px 8px; font-size:12px;">追加</button></div>`;
-    row.innerHTML = html;
-    box.appendChild(row);
+    const sel = document.getElementById(`sel-add-lv${lv}`);
+    if (!sel) return;
+    const currentVal = sel.value;
+    sel.innerHTML = '';
+    defaultPresets.forEach(p => sel.innerHTML += `<option value="${p.id}">${p.name}</option>`);
+    [1,2,3,4,5,6].forEach(c => sel.innerHTML += `<option value="cus_${c}">${currentSettings.olCustoms[c].n}</option>`);
+    if (currentVal) sel.value = currentVal;
   });
 
-  document.querySelectorAll('.btn-add-lv').forEach(b => b.addEventListener('click', (e) => {
-    const lv = e.target.dataset.lv;
-    const val = document.getElementById(`sel-add-lv${lv}`).value;
-    if (!currentSettings.olLevels[lv].includes(val)) {
-      currentSettings.olLevels[lv].push(val);
-      renderOutlineSettings();
-    }
-  }));
-
-  document.querySelectorAll('.ol-chip-del').forEach(x => x.addEventListener('click', (e) => {
-    const lv = e.target.dataset.lv, id = e.target.dataset.id;
-    currentSettings.olLevels[lv] = currentSettings.olLevels[lv].filter(i => i !== id);
-    renderOutlineSettings();
-  }));
-
+  // ② チップ（登録された見出し条件バッジ）のみを描画
+  [1, 2, 3].forEach(lv => {
+    const container = document.getElementById(`ol-chips-lv${lv}`);
+    if (!container) return;
+    container.innerHTML = '';
+    (currentSettings.olLevels[lv] || []).forEach(id => {
+      let name = id.startsWith('pre_') ? defaultPresets.find(p=>p.id===id)?.name : currentSettings.olCustoms[id.replace('cus_','')]?.n;
+      const chip = document.createElement('span');
+      chip.className = 'ol-chip';
+      chip.innerHTML = `${name} <span class="ol-chip-del" data-lv="${lv}" data-id="${id}">×</span>`;
+      chip.querySelector('.ol-chip-del')?.addEventListener('click', () => {
+        currentSettings.olLevels[lv] = currentSettings.olLevels[lv].filter(i => i !== id);
+        renderOutlineSettings();
+      });
+      container.appendChild(chip);
+   });
+  });
   updateCustomOptions();
 }
 
@@ -243,6 +238,17 @@ function setupSettingsModalEvents() {
       alert("保存しました");
     }
   });
+
+  // ★アウトライン追加ボタンのイベントリスナー（初期化時に1回だけ登録）
+  document.querySelectorAll('.btn-add-lv').forEach(b => b.addEventListener('click', (e) => {
+    const lv = e.target.dataset.lv;
+    const val = document.getElementById(`sel-add-lv${lv}`).value;
+    if (!currentSettings.olLevels[lv].includes(val)) {
+      currentSettings.olLevels[lv].push(val);
+      renderOutlineSettings();
+    }
+  }));
+
 
   document.getElementById('select-text-slot')?.addEventListener('change', updateTextSlotPreview);
   document.getElementById('btn-save-text-slot')?.addEventListener('click', () => {

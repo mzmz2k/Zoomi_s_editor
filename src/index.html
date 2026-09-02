@@ -160,7 +160,38 @@
       <div class="tab-panel hidden" id="tab-outline">
         <div class="setting-group"><label>マークダウン方式 (## など) を見出しにする</label><input type="checkbox" id="set-ol-md"></div>
         <hr style="border-color:rgba(127,127,127,0.3); margin:10px 0;">
-        <div id="ol-levels-container"></div>
+
+<div id="ol-levels-container">
+  <!-- 階層 1 -->
+  <div class="setting-column">
+    <label>階層 1</label>
+    <div id="ol-chips-lv1" class="ol-chips-container" style="display:flex; flex-wrap:wrap; margin-bottom:4px;"></div>
+    <div style="display:flex; gap:4px; width:100%;">
+      <select id="sel-add-lv1" style="flex:1;"></select>
+      <button type="button" class="btn btn-add-lv" data-lv="1" style="padding:2px 8px; font-size:12px;">追加</button>
+    </div>
+  </div>
+
+  <!-- 階層 2 -->
+  <div class="setting-column">
+    <label>階層 2</label>
+    <div id="ol-chips-lv2" class="ol-chips-container" style="display:flex; flex-wrap:wrap; margin-bottom:4px;"></div>
+    <div style="display:flex; gap:4px; width:100%;">
+      <select id="sel-add-lv2" style="flex:1;"></select>
+      <button type="button" class="btn btn-add-lv" data-lv="2" style="padding:2px 8px; font-size:12px;">追加</button>
+    </div>
+  </div>
+
+  <!-- 階層 3 -->
+  <div class="setting-column">
+    <label>階層 3</label>
+    <div id="ol-chips-lv3" class="ol-chips-container" style="display:flex; flex-wrap:wrap; margin-bottom:4px;"></div>
+    <div style="display:flex; gap:4px; width:100%;">
+      <select id="sel-add-lv3" style="flex:1;"></select>
+      <button type="button" class="btn btn-add-lv" data-lv="3" style="padding:2px 8px; font-size:12px;">追加</button>
+    </div>
+  </div>
+</div>
         <hr style="border-color:rgba(127,127,127,0.3); margin:15px 0;">
         <div class="setting-column">
           <label style="font-weight:bold;">カスタム見出し設定 (正規表現)</label>
