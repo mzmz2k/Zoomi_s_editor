@@ -37,7 +37,10 @@
         <div id="menu-settings" class="menu-item"><span>設定</span></div>
       </div>
     </div>
-    <span id="file-name" class="file-name">新規ファイル</span>
+    <div id="file-name" class="file-name">
+      <span id="file-name-text" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">新規ファイル</span>
+      <span id="dirty-mark" style="margin-left: 4px; flex-shrink: 0; display: none;">●</span>
+    </div>
     <div class="titlebar-buttons">
       <div class="titlebar-button minimize" id="titlebar-minimize"><span>ー</span></div>
       <div class="titlebar-button maximize" id="titlebar-maximize"><span>□</span></div>
