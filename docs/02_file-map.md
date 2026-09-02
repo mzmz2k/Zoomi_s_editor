@@ -1,7 +1,7 @@
 # ディレクトリ構成と主要ファイル
 
 ```
-Zoomi_s_editor/
+ZoomisEditor/
 ├── .githooks
 │   ├── _pre-push
 │   └── pre-commit
@@ -20,9 +20,13 @@ Zoomi_s_editor/
 │   │   ├── javascript.svg
 │   │   └── tauri.svg
 │   ├── bundle.js
+│   ├── dialog.js
 │   ├── index.html
 │   ├── main.js
+│   ├── outline.js
+│   ├── save.js
 │   ├── save.test.js
+│   ├── settings.js
 │   └── styles.css
 └── src-tauri
     ├── .gitignore
@@ -62,9 +66,16 @@ Zoomi_s_editor/
   └── import @codemirror/commands
   └── import @codemirror/search
   └── import @codemirror/view
+  └── import ./save.js
+  └── import ./dialog.js
+  └── import ./outline.js
+  └── import ./settings.js
 
 📄 `src/save.test.js`
   └── import vitest
+
+📄 `src-tauri/src/lib.rs`
+  └── use/mod std::fs
 
 ## 各ファイル詳細
 
@@ -75,8 +86,29 @@ Zoomi_s_editor/
 
 ### src/
 - `src/bundle.js` : （説明未記載）
+- `src/dialog.js` : *
+  - `export function showConflictDialog()`
 - `src/main.js` : （説明未記載）
+- `src/outline.js` : *
+  - `export function initOutline(editorView, getSettings, defaultPresets, messageFn)`
+  - `export function parseOutlineAndBookmarks()`
+- `src/save.js` : src/save.js
+  - `export class SaveManager`
 - `src/save.test.js` : （説明未記載）
+- `src/settings.js` : *
+  - `export const defaultPresets`
+  - `export const shortcutDefs`
+  - `export const currentSettings`
+  - `export const shortcuts`
+  - `export function hexToRgba(hex, alpha)`
+  - `export function applySettingsToStyle()`
+  - `export function loadSettings()`
+  - `export function saveAllSettings()`
+  - `export function initSettingsUI(options)`
+  - `export function renderOutlineSettings()`
+  - `export function updateTextSlotPreview()`
+  - `export function loadTextSlotData(n)`
+  - `export function buildShortcutList()`
 
 ### src-tauri/
 - `src-tauri/build.rs` : （説明未記載）
