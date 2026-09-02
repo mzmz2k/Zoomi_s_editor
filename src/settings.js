@@ -112,7 +112,6 @@ export function initSettingsUI(options) {
   _onSave = options.onSave;
   _openDialog = options.openDialog;
 
-  loadSettings();
   buildShortcutList();
   setupSettingsModalEvents();
 }

@@ -96,6 +96,10 @@ const customTheme = EditorView.theme({
   ".cm-activeLine": { backgroundColor: "var(--active-line-color) !important" }
 });
 
+// ★ 1. CodeMirror生成前に設定をロードして値を確定させる
+loadSettings();
+
+
 const editorThemeCompartment = new Compartment();
 
 const editorView = new EditorView({
@@ -103,7 +107,7 @@ const editorView = new EditorView({
     doc: "",
     extensions: [
       EditorView.lineWrapping, history(), highlightActiveLine(),
-      editorThemeCompartment.of(EditorView.theme({ ".cm-line": { lineHeight: "1.8" } })), // 初期値
+      editorThemeCompartment.of(EditorView.theme({ ".cm-line": { lineHeight: String(currentSettings.lh) } })), // ★ 2. 最初から設定済みの行間で一発生成
       keymap.of([{ key: "Enter", run: insertNewline }, { key: "Mod-f", run: toggleSearchPanel }, ...defaultKeymap, ...historyKeymap, ...searchKeymap]),
       search({ top: true }), EditorState.phrases.of({ "next": "↓", "previous": "↑", "match case": "Aa", "regexp": ".*", "by word": "ab", "replace": "置換", "replace all": "すべて置換" }),
       combinedUpdateListener, customTheme

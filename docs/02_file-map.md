@@ -1,7 +1,7 @@
 # ディレクトリ構成と主要ファイル
 
 ```
-ZoomisEditor/
+Zoomi_s_editor/
 ├── .githooks
 │   ├── _pre-push
 │   └── pre-commit
