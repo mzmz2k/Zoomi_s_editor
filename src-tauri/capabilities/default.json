@@ -27,6 +27,8 @@
     "fs:scope-home",
     "fs:scope-desktop-recursive",
     "fs:scope-document-recursive",
+    "fs:allow-fstat",
+    "fs:allow-stat",
     
     "dialog:allow-save",
     "dialog:allow-open",

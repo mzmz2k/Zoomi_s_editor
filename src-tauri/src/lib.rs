@@ -19,8 +19,19 @@ fn get_startup_file() -> Option<serde_json::Value> {
     None
 }
 
+// 指定したファイルの最終更新日時（ミリ秒）を取得するコマンド
 #[tauri::command]
-fn save_file_direct(path: String, content: String) -> Result<(), String> {
+fn get_file_mtime(path: String) -> Result<u64, String> {
+    std::fs::metadata(&path)
+        .and_then(|m| m.modified())
+        .map(|time| {
+            time.duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_millis() as u64
+        })
+        .map_err(|e| format!("ファイル情報の取得に失敗しました: {}", e))
+}
+
+#[tauri::command] // ★ 変更：戻り値を Result<u64, String> にして、保存後の更新日時を返すようにする
+fn save_file_direct(path: String, content: String) -> Result<u64, String> {
     let path_buf = std::path::PathBuf::from(&path);
     let mut temp_path = path_buf.clone();
     
@@ -39,7 +50,14 @@ fn save_file_direct(path: String, content: String) -> Result<(), String> {
 
     // 2. 一時ファイルを本来のファイル名にリネーム（OSレベルでアトミックに置換される）
     match std::fs::rename(&temp_path, &path_buf) {
-        Ok(_) => Ok(()),
+        Ok(_) => {
+            // ★ 追加：保存成功後、新しいファイルの更新日時を取得してJS側に返す
+            let mtime = std::fs::metadata(&path_buf)
+                .and_then(|m| m.modified())
+                .map(|time| time.duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_millis() as u64)
+                .unwrap_or(0);
+            Ok(mtime)
+        },
         Err(e) => {
             // リネームに失敗した場合はゴミを残さないよう一時ファイルを削除
             let _ = std::fs::remove_file(&temp_path);
@@ -66,8 +84,10 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             greet,
             get_startup_file,
+            get_file_mtime,
             save_file_direct,
             show_main_window
+
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

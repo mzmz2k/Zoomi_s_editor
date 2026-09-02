@@ -4,6 +4,7 @@ import { defaultKeymap, history, historyKeymap, insertNewline } from "@codemirro
 import { search, searchKeymap, openSearchPanel, closeSearchPanel } from "@codemirror/search"; 
 import { highlightActiveLine } from "@codemirror/view"; 
 import { SaveManager } from "./save.js";
+import { showConflictDialog } from "./dialog.js";
 
 const u = String.fromCharCode(95); const tauriKey = u + u + "TAURI" + u + u;
 const { save, open, message, ask } = window[tauriKey].dialog; const { getCurrentWindow } = window[tauriKey].window;
@@ -16,11 +17,12 @@ const wordCounter = document.getElementById('word-counter'); const fileNameDispl
 let currentFilePath = null; let isDirty = false;
 
 const saveManager = new SaveManager({
-  fs: { stat, readDir, mkdir, remove },
+  fs: { stat, readDir, mkdir, remove, readFile, readBinaryFile, readTextFile },
   dialog: { save, ask, message },
   invoke,
   getEditorText: () => getEditorText(),
   getSettings: () => currentSettings,
+  onConflict: showConflictDialog,
   onSaveSuccess: (path, isAutoSave = false) => {
     currentFilePath = path;
     setDirty(false);
@@ -428,7 +430,7 @@ async function openFileDirect(filePath) {
     
     // ★ここで setEditorText が呼ばれ、その中で遅延して目次解析されるので、ここでの二重呼び出しは削除
     setEditorText(text); currentFilePath = filePath; setDirty(false); updateWordCount(); 
-    await saveManager.updateLastModifiedTime(filePath);
+    await saveManager.updateFileInfo(filePath, text); // テキストも渡してハッシュを記録させる
     
   } catch (err) { 
     await message(`開けません。\n${err}`, { type: 'error' }); 
@@ -602,7 +604,7 @@ async function loadStartupFile() {
         currentFilePath = data.path; 
         setDirty(false); 
         updateWordCount(); 
-        await saveManager.updateLastModifiedTime(data.path);
+        await saveManager.updateFileInfo(data.path, data.content); // テキストも渡してハッシュを記録させる
       }
     } catch (err) {}
   }
