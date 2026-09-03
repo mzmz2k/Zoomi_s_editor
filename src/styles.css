@@ -1,5 +1,5 @@
 :root {
-  --bg-color: #2c2c2c; --menu-bg: #222222; --text-color: #f4f4f4; --titlebar-bg: #393939; --selection-color: rgba(255, 255, 255, 0.2);
+  --bg-color: #2c2c2c; --menu-bg: #222222; --text-color: #f4f4f4; --titlebar-bg: #5a4c4c; --selection-color: rgba(255, 255, 255, 0.2);
   --highlight-color: #007acc; --titlebar-text: #adadad; --counter-color: #727272; --active-line-color: transparent;
   --sidebar-width: 250px; --preview-size: 350px; /* ★ 幅・高さの兼用変数 */
   --max-width: 100%; --max-height: 100%;
