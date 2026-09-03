@@ -24,7 +24,7 @@ export const shortcutDefs = [
 export const currentSettings = {
   fontSize: 16, lh: 1.8, lineLength: 0, editorFont: "", uiFont: "", previewFont: "", countNewline: false, typewriterMode: false, fadeEnabled: false, fadeRangeTop: 100, fadeRangeBottom: 100, fadeOpacity: 0.8,
   activeLineEnabled: false, activeLineColor: "#ffffff", btnStyle: "mac", backupEnabled: true, backupDir: "", autoSaveEnabled: true, sidebarWidth: 250, previewSize: 350,
-  bgColor: "#2c2c2c", menuBg: "#222222", titlebarBg: "#393939", textColor: "#f4f4f4", selectionColor: "#ffffff", highlightColor: "#007acc", titlebarText: "#adadad", counterColor: "#727272",
+  bgColor: "#2c2c2c", menuBg: "#222222", titlebarBg: "#4a4444", textColor: "#f4f4f4", selectionColor: "#ffffff", highlightColor: "#007acc", titlebarText: "#adadad", counterColor: "#727272",
   olMd: true, olLevels: { 1: ['pre_chap'], 2: ['pre_sec'], 3: ['pre_bra', 'pre_sym'] },
   olCustoms: { 1: {n:'カスタム1', r:''}, 2: {n:'カスタム2', r:''}, 3: {n:'カスタム3', r:''}, 4: {n:'カスタム4', r:''}, 5: {n:'カスタム5', r:''}, 6: {n:'カスタム6', r:''} },
   previewSplitFirst: false 
@@ -280,7 +280,7 @@ function setupSettingsModalEvents() {
 
   document.getElementById('btn-apply-theme')?.addEventListener('click', () => {
     const val = document.getElementById('select-theme-load').value;
-    if (val === 'p_dark') applyThemePreset({ bg: "#2c2c2c", mBg: "#222222", title: "#393939", text: "#f4f4f4", sel: "#ffffff", hl: "#007acc", tText: "#adadad", cText: "#727272", actCol: "#ffffff" });
+    if (val === 'p_dark') applyThemePreset({ bg: "#2c2c2c", mBg: "#222222", title: "#573d3d", text: "#f4f4f4", sel: "#ffffff", hl: "#007acc", tText: "#adadad", cText: "#727272", actCol: "#ffffff" });
     else if (val === 'p_light') applyThemePreset({ bg: "#ffffff", mBg: "#f9f9f9", title: "#f0f0f0", text: "#333333", sel: "#000000", hl: "#007acc", tText: "#666666", cText: "#888888", actCol: "#000000" });
     else if (val === 'p_parchment') applyThemePreset({ bg: "#f4ecd8", mBg: "#e8ddc0", title: "#e6daba", text: "#4a3623", sel: "#5c4033", hl: "#8b5a2b", tText: "#5c4033", cText: "#8b7355", actCol: "#5c4033" });
     else {

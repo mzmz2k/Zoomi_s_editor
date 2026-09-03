@@ -1,17 +1,16 @@
 /*ファイル保存、自動保存、バックアップ、および競合検知を担当するモジュール
  */
 export class SaveManager {
-  constructor({ fs, dialog, invoke, getEditorText, getSettings, onSaveSuccess }) {
+  constructor({ fs, dialog, invoke, getEditorText, getSettings, onSaveSuccess, onConflict }) {
     this.fs = fs;
     this.dialog = dialog;
     this.invoke = invoke;
     this.getEditorText = getEditorText;
     this.getSettings = getSettings;
     this.onSaveSuccess = onSaveSuccess;
+    this.onConflict = onConflict;
     
     this.currentFilePath = null;
-    console.warn("Failed to get stat (mtime). Conflict check will rely entirely on hash.", e);
-    this.lastModifiedTime = null; // エラー時はnullにして、保存時に必ずハッシュ比較させる
     this.lastSavedHash = null; // 前回保存/読込時のハッシュ値
     this.isSaving = false;
     this.autoSaveTimer = null;
@@ -40,90 +39,48 @@ export class SaveManager {
     }
   }
 
-  /**
-   * ディスクからファイルを文字列として読み込む
+
+ /**
+   * ディスクからファイルを文字列として読み込む（Rust側の安全なコマンドを利用）
    */
   async readFileText(path) {
-    const readBin = this.fs.readFile || this.fs.readBinaryFile;
-    if (readBin) {
-      const bytes = await readBin(path);
-      try {
-        return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
-      } catch (e) {
-        return new TextDecoder('shift-jis').decode(bytes);
-      }
-    } else if (this.fs.readTextFile) {
-      return await this.fs.readTextFile(path);
-    }
-    throw new Error("ファイルを読み込む手段がありません");
+    return await this.invoke('read_file_text', { path });
   }
 
   /**
-   * Rust経由で更新日時を取得する
+   * ファイルパスとハッシュを記録する
    */
-  async getMtime(path) {
-    try {
-      return await this.invoke('get_file_mtime', { path });
-    } catch (e) {
-      return null;
-    }
-  }
-
-  /**
-   * ファイルの更新日時とハッシュを記録する
-   * ※保存直後はRustから返ってきた確実なmtime(knownMtime)をセットする
-   */
-  async updateFileInfo(path, content, knownMtime = null) {
+  async updateFileInfo(path, content) {
     if (!path) {
-      this.lastModifiedTime = null;
       this.lastSavedHash = null;
       return;
     }
     this.currentFilePath = path;
-    
-    // ハッシュの計算と保存
     this.lastSavedHash = await this.computeHash(content);
-
-    if (knownMtime !== null) {
-      this.lastModifiedTime = knownMtime;
-    } else {
-      this.lastModifiedTime = await this.getMtime(path);
-    }
   }
 
   /**
-   * 外部でファイルが変更されたかチェックする
+   * 外部でファイルが変更されたかチェックする（ハッシュ比較のみ）
    */
   async checkConflict(path) {
-      if (!path) return false;
+    if (!path) return false;
 
-    const currentMtime = await this.getMtime(path);
-    const statError = currentMtime === null;
-
-    // ① タイムスタンプが正常に取得でき、前回と同じか古い場合は「確実に安全」
-    if (!statError && this.lastModifiedTime && currentMtime <= this.lastModifiedTime) {
-      return false;
-     }
-
-    // ② タイムスタンプが新しい、または取得エラーの場合は、ディスクの内容を読んでハッシュ比較
     try {
+      // 常にディスク上の最新の内容を取得してハッシュ化
       const diskText = await this.readFileText(path);
       const diskHash = await this.computeHash(diskText);
       
+      // 開いた時・前回保存した時のハッシュと異なれば競合
       if (diskHash !== this.lastSavedHash) {
-        return true; // ハッシュが違う ＝ 外部で書き換えられている
-      } else {
-        // 中身は同じなので、次回のためにmtimeだけ更新しておく
-        if (currentMtime) this.lastModifiedTime = currentMtime;
-        return false;
+        return true; 
       }
+      return false; 
     } catch (e) {
-      // ファイル読み込みに失敗した場合（削除されたなど）は、
-      // 勝手に上書きしてデータを消さないよう必ず確認ダイアログを出す
-      console.warn("競合チェック時のファイル読み込みに失敗。安全のためダイアログを表示します。", e);
+      // 読み込みに失敗した場合（削除・ロック等）は安全のため警告
       return true;
     }
   }
+
 
   /**
    * 手動保存処理
@@ -139,20 +96,29 @@ export class SaveManager {
         const filePath = await this.dialog.save({ filters: [{ name: 'Text', extensions: ['txt', 'md'] }] });
         if (!filePath) return;
         targetPath = filePath;
+
       } else {
         // 上書き保存の場合は競合チェックを行う
         const hasConflict = await this.checkConflict(targetPath);
         if (hasConflict) {
-          const yes = await this.dialog.ask('ファイルが外部プログラムによって変更されています。\n上書きして保存しますか？', { type: 'warning' });
+          let yes = false;
+          // カスタムダイアログ（showConflictDialog）が渡されていればそちらを使用
+          if (this.onConflict) {
+            yes = await this.onConflict();
+          } else {
+            yes = await this.dialog.ask('ファイルが外部プログラムによって変更されています。\n上書きして保存しますか？', { type: 'warning' });
+          }
+          
           if (!yes) return; // キャンセル
         }
       }
 
       const textToSave = this.getEditorText();
+
             
-      // 保存して、Rust側から新しいmtimeを受け取る
-      const newMtime = await this.invoke('save_file_direct', { path: targetPath, content: textToSave });
-      await this.updateFileInfo(targetPath, textToSave, newMtime); // 成功したらハッシュと新しいmtimeを更新
+      // 保存する
+      await this.invoke('save_file_direct', { path: targetPath, content: textToSave });
+      await this.updateFileInfo(targetPath, textToSave); // 成功したらハッシュを更新
       
       if (this.onSaveSuccess) {
         this.onSaveSuccess(targetPath, false); // isAutoSave = false
@@ -177,8 +143,8 @@ export class SaveManager {
 
     try {
       const textToSave = this.getEditorText();
-      const newMtime = await this.invoke('save_file_direct', { path: this.currentFilePath, content: textToSave });
-      await this.updateFileInfo(this.currentFilePath, textToSave, newMtime);
+      await this.invoke('save_file_direct', { path: this.currentFilePath, content: textToSave });
+      await this.updateFileInfo(this.currentFilePath, textToSave);
       if (this.onSaveSuccess) {
         this.onSaveSuccess(this.currentFilePath, true); // isAutoSave = true
       }
