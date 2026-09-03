@@ -18,7 +18,7 @@ const { stat, writeTextFile, readTextFile, readFile, readBinaryFile, readDir, re
 const WebviewWindow = window[tauriKey].webviewWindow?.WebviewWindow;
 
 const appWindow = getCurrentWindow(); const container = document.getElementById('editor-container');
-const wordCounter = document.getElementById('word-counter'); const fileNameDisplay = document.getElementById('file-name');
+const fileNameDisplay = document.getElementById('file-name');
 
 let currentFilePath = null; let isDirty = false;
 
