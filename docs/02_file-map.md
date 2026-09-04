@@ -9,12 +9,15 @@ Zoomi_s_editor/
 ├── .vscode
 │   └── extensions.json
 ├── README.md
+├── THIRD_PARTY_LICENSES.txt
 ├── myicon.png
 ├── package-lock.json
 ├── package.json
 ├── scripts
+│   ├── build.js
 │   ├── generate_filemap.js
-│   └── generate_filemap.test.js
+│   ├── generate_filemap.test.js
+│   └── generate_licenses.js
 ├── src
 │   ├── assets
 │   │   ├── javascript.svg
@@ -53,6 +56,11 @@ Zoomi_s_editor/
 ```
 
 ## 依存関係
+📄 `scripts/build.js`
+  └── import esbuild
+  └── import fs
+  └── import ./generate_licenses.js
+
 📄 `scripts/generate_filemap.js`
   └── import fs
   └── import path
@@ -62,6 +70,10 @@ Zoomi_s_editor/
   └── import ./generate_filemap.js
   └── import $lib/components
   └── import lucide-svelte
+
+📄 `scripts/generate_licenses.js`
+  └── import fs
+  └── import path
 
 📄 `src/build.js`
   └── import esbuild
@@ -98,9 +110,12 @@ Zoomi_s_editor/
 ## 各ファイル詳細
 
 ### scripts/
+- `scripts/build.js` : esbuild を実行し、アプリバージョンとビルド日を自動注入するビルドスクリプト
 - `scripts/generate_filemap.js` : （説明未記載）
   - `export const Extractor`
 - `scripts/generate_filemap.test.js` : （説明未記載）
+- `scripts/generate_licenses.js` : 依存ライブラリのライセンス全文を収集し、THIRD_PARTY_LICENSES.txt を自動生成するスクリプト
+  - `export function generateThirdPartyLicenses()`
 
 ### src/
 - `src/build.js` : esbuild を実行し、アプリバージョンとビルド日を自動注入するビルドスクリプト
