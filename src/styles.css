@@ -207,3 +207,15 @@ input[type="checkbox"]:checked { background-color: var(--highlight-color); borde
 #conflict-modal .btn:focus-visible {
   outline: none;
 }
+
+/* Lucide アイコンの共通インライン配置 */
+.lucide-icon {
+  display: inline-block;
+  vertical-align: -2px;
+  margin-right: 6px;
+  flex-shrink: 0;
+}
+
+.sb-btn svg {
+  display: block;
+}

@@ -1,5 +1,6 @@
 /*アウトライン（目次）とブックマークの解析・DOM構築を行うモジュール
  */
+import { createElement, Bookmark } from 'lucide';
 
 let _editorView = null;
 let _getSettings = null;
@@ -86,7 +87,10 @@ export function parseOutlineAndBookmarks() {
   if (bookmarks.length === 0) { bList.innerHTML = '<div class="menu-item" style="color:var(--counter-color);">(なし)</div>'; }
   else { 
     bookmarks.forEach(b => { 
-      const el = document.createElement('div'); el.className = 'menu-item'; el.textContent = '🔖 ' + b.text; 
+      const el = document.createElement('div'); 
+      el.className = 'menu-item'; 
+      const icon = createElement(Bookmark, { width: 14, height: 14, class: 'lucide-icon' }).outerHTML;
+      el.innerHTML = `<span style="display:inline-flex; align-items:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px;">${icon}${b.text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span>`;
       el.addEventListener('click', async () => { 
         document.getElementById('dropdown-menu').classList.add('hidden'); 
         const doc = _editorView.state.doc;

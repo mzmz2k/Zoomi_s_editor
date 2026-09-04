@@ -18169,6 +18169,76 @@ ${err}`, { type: "error" });
     });
   }
 
+  // node_modules/lucide/dist/esm/defaultAttributes.mjs
+  var defaultAttributes = {
+    xmlns: "http://www.w3.org/2000/svg",
+    width: 24,
+    height: 24,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    "stroke-width": 2,
+    "stroke-linecap": "round",
+    "stroke-linejoin": "round"
+  };
+
+  // node_modules/lucide/dist/esm/createElement.mjs
+  var createSVGElement = ([tag, attrs, children]) => {
+    const element = document.createElementNS("http://www.w3.org/2000/svg", tag);
+    Object.keys(attrs).forEach((name2) => {
+      element.setAttribute(name2, String(attrs[name2]));
+    });
+    if (children?.length) {
+      children.forEach((child) => {
+        const childElement = createSVGElement(child);
+        element.appendChild(childElement);
+      });
+    }
+    return element;
+  };
+  var createElement = (iconNode, customAttrs = {}) => {
+    const tag = "svg";
+    const attrs = {
+      ...defaultAttributes,
+      ...customAttrs
+    };
+    return createSVGElement([tag, attrs, iconNode]);
+  };
+
+  // node_modules/lucide/dist/esm/icons/bookmark.mjs
+  var Bookmark = [
+    [
+      "path",
+      {
+        d: "M17 3a2 2 0 0 1 2 2v15a1 1 0 0 1-1.496.868l-4.512-2.578a2 2 0 0 0-1.984 0l-4.512 2.578A1 1 0 0 1 5 20V5a2 2 0 0 1 2-2z"
+      }
+    ]
+  ];
+
+  // node_modules/lucide/dist/esm/icons/file-text.mjs
+  var FileText = [
+    [
+      "path",
+      {
+        d: "M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"
+      }
+    ],
+    ["path", { d: "M14 2v5a1 1 0 0 0 1 1h5" }],
+    ["path", { d: "M10 9H8" }],
+    ["path", { d: "M16 13H8" }],
+    ["path", { d: "M16 17H8" }]
+  ];
+
+  // node_modules/lucide/dist/esm/icons/folder.mjs
+  var Folder = [
+    [
+      "path",
+      {
+        d: "M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"
+      }
+    ]
+  ];
+
   // src/outline.js
   var _editorView = null;
   var _getSettings = null;
@@ -18285,7 +18355,8 @@ ${err}`, { type: "error" });
       bookmarks.forEach((b) => {
         const el = document.createElement("div");
         el.className = "menu-item";
-        el.textContent = "\u{1F516} " + b.text;
+        const icon = createElement(Bookmark, { width: 14, height: 14, class: "lucide-icon" }).outerHTML;
+        el.innerHTML = `<span style="display:inline-flex; align-items:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px;">${icon}${b.text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</span>`;
         el.addEventListener("click", async () => {
           document.getElementById("dropdown-menu").classList.add("hidden");
           const doc3 = _editorView.state.doc;
@@ -19281,7 +19352,9 @@ ${err}`, { type: "error" });
       el.className = "menu-item";
       el.title = p.path + "\n\uFF08\u53F3\u30AF\u30EA\u30C3\u30AF\u3067\u524A\u9664\uFF09";
       const name2 = p.path.split(/[/\\]/).pop();
-      el.innerHTML = `<span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px;">${p.isDir ? "\u{1F4C1}" : "\u{1F4C4}"} ${name2}</span>`;
+      const iconNode = p.isDir ? Folder : FileText;
+      const icon = createElement(iconNode, { width: 14, height: 14, class: "lucide-icon" }).outerHTML;
+      el.innerHTML = `<span style="display:inline-flex; align-items:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px;">${icon}${name2}</span>`;
       el.addEventListener("click", async () => {
         document.getElementById("dropdown-menu").classList.add("hidden");
         if (p.isDir) {
@@ -19382,3 +19455,18 @@ ${err}`, { type: "error" });
     });
   }
 })();
+/*! Bundled license information:
+
+lucide/dist/esm/defaultAttributes.mjs:
+lucide/dist/esm/createElement.mjs:
+lucide/dist/esm/icons/bookmark.mjs:
+lucide/dist/esm/icons/file-text.mjs:
+lucide/dist/esm/icons/folder.mjs:
+lucide/dist/esm/lucide.mjs:
+  (**
+   * @license lucide v1.40.0 - ISC
+   *
+   * This source code is licensed under the ISC license.
+   * See the LICENSE file in the root directory of this source tree.
+   *)
+*/

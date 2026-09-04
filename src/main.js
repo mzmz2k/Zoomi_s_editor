@@ -8,6 +8,8 @@ import { showConflictDialog } from "./dialog.js";
 import { initOutline, parseOutlineAndBookmarks } from "./outline.js";
 import { currentSettings, shortcuts, defaultPresets, shortcutDefs, hexToRgba, applySettingsToStyle, loadSettings, saveAllSettings, initSettingsUI, loadTextSlotData } from "./settings.js";
 import { initLayout, toggleOutline, cyclePreview, syncPreviewToPos, updatePreviewContent } from "./layout.js";
+import { createElement, Folder, FileText } from 'lucide';
+
 const wordCounter = document.getElementById('word-counter'); 
 const fileNameText = document.getElementById('file-name-text');
 const dirtyMark = document.getElementById('dirty-mark');
@@ -236,7 +238,9 @@ function renderRegisteredPaths() {
     el.className = 'menu-item'; 
     el.title = p.path + '\n（右クリックで削除）'; 
     const name = p.path.split(/[/\\]/).pop(); 
-    el.innerHTML = `<span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px;">${p.isDir ? '📁' : '📄'} ${name}</span>`; 
+    const iconNode = p.isDir ? Folder : FileText;
+    const icon = createElement(iconNode, { width: 14, height: 14, class: 'lucide-icon' }).outerHTML;
+    el.innerHTML = `<span style="display:inline-flex; align-items:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px;">${icon}${name}</span>`; 
     
     // 左クリックで開く
     el.addEventListener('click', async () => { 
