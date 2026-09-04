@@ -17692,7 +17692,7 @@
 
   // src/save.js
   var SaveManager = class {
-    constructor({ fs, dialog, invoke: invoke2, getEditorText: getEditorText2, getSettings, onSaveSuccess, onConflict }) {
+    constructor({ fs, dialog, invoke: invoke2, getEditorText: getEditorText2, getSettings, onSaveSuccess, onConflict, onReload }) {
       this.fs = fs;
       this.dialog = dialog;
       this.invoke = invoke2;
@@ -17700,6 +17700,7 @@
       this.getSettings = getSettings;
       this.onSaveSuccess = onSaveSuccess;
       this.onConflict = onConflict;
+      this.onReload = onReload;
       this.currentFilePath = null;
       this.lastSavedHash = null;
       this.isSaving = false;
@@ -17749,10 +17750,8 @@
         const diskText = await this.readFileText(path);
         const diskHash = await this.computeHash(diskText);
         if (diskHash !== this.lastSavedHash) {
-          console.log("[checkConflict] MISMATCH", { diskHash, lastSavedHash: this.lastSavedHash });
           return true;
         }
-        console.log("[checkConflict] MATCH", { diskHash, lastSavedHash: this.lastSavedHash });
         return false;
       } catch (e) {
         return true;
@@ -17766,23 +17765,28 @@
       this.isSaving = true;
       try {
         let targetPath = this.currentFilePath;
-        console.log("[saveFile] targetPath:", targetPath, "isSaveAs:", isSaveAs);
         if (!targetPath || isSaveAs) {
           const filePath = await this.dialog.save({ filters: [{ name: "Text", extensions: ["txt", "md"] }] });
           if (!filePath) return;
           targetPath = filePath;
         } else {
           const hasConflict = await this.checkConflict(targetPath);
-          console.log("[saveFile] hasConflict:", hasConflict);
           if (hasConflict) {
-            let yes = false;
+            let action = "cancel";
             if (this.onConflict) {
-              yes = await this.onConflict();
-              console.log("[saveFile] onConflict result (yes):", yes);
+              const diskText = await this.readFileText(targetPath);
+              action = await this.onConflict({ diskText, editorText: this.getEditorText() });
             } else {
-              yes = await this.dialog.ask("\u30D5\u30A1\u30A4\u30EB\u304C\u5916\u90E8\u30D7\u30ED\u30B0\u30E9\u30E0\u306B\u3088\u3063\u3066\u5909\u66F4\u3055\u308C\u3066\u3044\u307E\u3059\u3002\n\u4E0A\u66F8\u304D\u3057\u3066\u4FDD\u5B58\u3057\u307E\u3059\u304B\uFF1F", { type: "warning" });
+              const yes = await this.dialog.ask("\u30D5\u30A1\u30A4\u30EB\u304C\u5916\u90E8\u30D7\u30ED\u30B0\u30E9\u30E0\u306B\u3088\u3063\u3066\u5909\u66F4\u3055\u308C\u3066\u3044\u307E\u3059\u3002\n\u4E0A\u66F8\u304D\u3057\u3066\u4FDD\u5B58\u3057\u307E\u3059\u304B\uFF1F", { type: "warning" });
+              action = yes ? "overwrite" : "cancel";
             }
-            if (!yes) return;
+            if (action === "reload") {
+              const diskText = await this.readFileText(targetPath);
+              if (this.onReload) this.onReload(diskText);
+              await this.updateFileInfo(targetPath, diskText);
+              return;
+            }
+            if (action !== "overwrite") return;
           }
         }
         const textToSave = this.getEditorText();
@@ -17861,24 +17865,304 @@ ${err}`, { type: "error" });
     }
   };
 
+  // node_modules/diff/libesm/diff/base.js
+  var Diff = class {
+    diff(oldStr, newStr, options = {}) {
+      let callback;
+      if (typeof options === "function") {
+        callback = options;
+        options = {};
+      } else if ("callback" in options) {
+        callback = options.callback;
+      }
+      const oldString = this.castInput(oldStr, options);
+      const newString = this.castInput(newStr, options);
+      const oldTokens = this.removeEmpty(this.tokenize(oldString, options));
+      const newTokens = this.removeEmpty(this.tokenize(newString, options));
+      return this.diffWithOptionsObj(oldTokens, newTokens, options, callback);
+    }
+    diffWithOptionsObj(oldTokens, newTokens, options, callback) {
+      var _a2;
+      const done = (value) => {
+        value = this.postProcess(value, options);
+        if (callback) {
+          setTimeout(function() {
+            callback(value);
+          }, 0);
+          return void 0;
+        } else {
+          return value;
+        }
+      };
+      const newLen = newTokens.length, oldLen = oldTokens.length;
+      let editLength = 1;
+      let maxEditLength = newLen + oldLen;
+      if (options.maxEditLength != null) {
+        maxEditLength = Math.min(maxEditLength, options.maxEditLength);
+      }
+      const maxExecutionTime = (_a2 = options.timeout) !== null && _a2 !== void 0 ? _a2 : Infinity;
+      const abortAfterTimestamp = Date.now() + maxExecutionTime;
+      const bestPath = [{ oldPos: -1, lastComponent: void 0 }];
+      let newPos = this.extractCommon(bestPath[0], newTokens, oldTokens, 0, options);
+      if (bestPath[0].oldPos + 1 >= oldLen && newPos + 1 >= newLen) {
+        return done(this.buildValues(bestPath[0].lastComponent, newTokens, oldTokens));
+      }
+      let minDiagonalToConsider = -Infinity, maxDiagonalToConsider = Infinity;
+      const execEditLength = () => {
+        for (let diagonalPath = Math.max(minDiagonalToConsider, -editLength); diagonalPath <= Math.min(maxDiagonalToConsider, editLength); diagonalPath += 2) {
+          let basePath;
+          const removePath = bestPath[diagonalPath - 1], addPath = bestPath[diagonalPath + 1];
+          if (removePath) {
+            bestPath[diagonalPath - 1] = void 0;
+          }
+          let canAdd = false;
+          if (addPath) {
+            const addPathNewPos = addPath.oldPos - diagonalPath;
+            canAdd = addPath && 0 <= addPathNewPos && addPathNewPos < newLen;
+          }
+          const canRemove = removePath && removePath.oldPos + 1 < oldLen;
+          if (!canAdd && !canRemove) {
+            bestPath[diagonalPath] = void 0;
+            continue;
+          }
+          if (!canRemove || canAdd && removePath.oldPos < addPath.oldPos) {
+            basePath = this.addToPath(addPath, true, false, 0, options);
+          } else {
+            basePath = this.addToPath(removePath, false, true, 1, options);
+          }
+          newPos = this.extractCommon(basePath, newTokens, oldTokens, diagonalPath, options);
+          if (basePath.oldPos + 1 >= oldLen && newPos + 1 >= newLen) {
+            return done(this.buildValues(basePath.lastComponent, newTokens, oldTokens)) || true;
+          } else {
+            bestPath[diagonalPath] = basePath;
+            if (basePath.oldPos + 1 >= oldLen) {
+              maxDiagonalToConsider = Math.min(maxDiagonalToConsider, diagonalPath - 1);
+            }
+            if (newPos + 1 >= newLen) {
+              minDiagonalToConsider = Math.max(minDiagonalToConsider, diagonalPath + 1);
+            }
+          }
+        }
+        editLength++;
+      };
+      if (callback) {
+        (function exec() {
+          setTimeout(function() {
+            if (editLength > maxEditLength || Date.now() > abortAfterTimestamp) {
+              return callback(void 0);
+            }
+            if (!execEditLength()) {
+              exec();
+            }
+          }, 0);
+        })();
+      } else {
+        while (editLength <= maxEditLength && Date.now() <= abortAfterTimestamp) {
+          const ret = execEditLength();
+          if (ret) {
+            return ret;
+          }
+        }
+      }
+    }
+    addToPath(path, added, removed, oldPosInc, options) {
+      const last = path.lastComponent;
+      if (last && !options.oneChangePerToken && last.added === added && last.removed === removed) {
+        return {
+          oldPos: path.oldPos + oldPosInc,
+          lastComponent: { count: last.count + 1, added, removed, previousComponent: last.previousComponent }
+        };
+      } else {
+        return {
+          oldPos: path.oldPos + oldPosInc,
+          lastComponent: { count: 1, added, removed, previousComponent: last }
+        };
+      }
+    }
+    extractCommon(basePath, newTokens, oldTokens, diagonalPath, options) {
+      const newLen = newTokens.length, oldLen = oldTokens.length;
+      let oldPos = basePath.oldPos, newPos = oldPos - diagonalPath, commonCount = 0;
+      while (newPos + 1 < newLen && oldPos + 1 < oldLen && this.equals(oldTokens[oldPos + 1], newTokens[newPos + 1], options)) {
+        newPos++;
+        oldPos++;
+        commonCount++;
+        if (options.oneChangePerToken) {
+          basePath.lastComponent = { count: 1, previousComponent: basePath.lastComponent, added: false, removed: false };
+        }
+      }
+      if (commonCount && !options.oneChangePerToken) {
+        basePath.lastComponent = { count: commonCount, previousComponent: basePath.lastComponent, added: false, removed: false };
+      }
+      basePath.oldPos = oldPos;
+      return newPos;
+    }
+    equals(left, right, options) {
+      if (options.comparator) {
+        return options.comparator(left, right);
+      } else {
+        return left === right || !!options.ignoreCase && left.toLowerCase() === right.toLowerCase();
+      }
+    }
+    removeEmpty(array) {
+      const ret = [];
+      for (let i2 = 0; i2 < array.length; i2++) {
+        if (array[i2]) {
+          ret.push(array[i2]);
+        }
+      }
+      return ret;
+    }
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    castInput(value, options) {
+      return value;
+    }
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    tokenize(value, options) {
+      return Array.from(value);
+    }
+    join(chars) {
+      return chars.join("");
+    }
+    postProcess(changeObjects, options) {
+      return changeObjects;
+    }
+    get useLongestToken() {
+      return false;
+    }
+    buildValues(lastComponent, newTokens, oldTokens) {
+      const components = [];
+      let nextComponent;
+      while (lastComponent) {
+        components.push(lastComponent);
+        nextComponent = lastComponent.previousComponent;
+        delete lastComponent.previousComponent;
+        lastComponent = nextComponent;
+      }
+      components.reverse();
+      const componentLen = components.length;
+      let componentPos = 0, newPos = 0, oldPos = 0;
+      for (; componentPos < componentLen; componentPos++) {
+        const component = components[componentPos];
+        if (!component.removed) {
+          if (!component.added && this.useLongestToken) {
+            let value = newTokens.slice(newPos, newPos + component.count);
+            value = value.map(function(value2, i2) {
+              const oldValue = oldTokens[oldPos + i2];
+              return oldValue.length > value2.length ? oldValue : value2;
+            });
+            component.value = this.join(value);
+          } else {
+            component.value = this.join(newTokens.slice(newPos, newPos + component.count));
+          }
+          newPos += component.count;
+          if (!component.added) {
+            oldPos += component.count;
+          }
+        } else {
+          component.value = this.join(oldTokens.slice(oldPos, oldPos + component.count));
+          oldPos += component.count;
+        }
+      }
+      return components;
+    }
+  };
+
+  // node_modules/diff/libesm/diff/line.js
+  var LineDiff = class extends Diff {
+    constructor() {
+      super(...arguments);
+      this.tokenize = tokenize;
+    }
+    equals(left, right, options) {
+      if (options.ignoreWhitespace) {
+        if (!options.newlineIsToken || !left.includes("\n")) {
+          left = left.trim();
+        }
+        if (!options.newlineIsToken || !right.includes("\n")) {
+          right = right.trim();
+        }
+      } else if (options.ignoreNewlineAtEof && !options.newlineIsToken) {
+        if (left.endsWith("\n")) {
+          left = left.slice(0, -1);
+        }
+        if (right.endsWith("\n")) {
+          right = right.slice(0, -1);
+        }
+      }
+      return super.equals(left, right, options);
+    }
+  };
+  var lineDiff = new LineDiff();
+  function diffLines(oldStr, newStr, options) {
+    return lineDiff.diff(oldStr, newStr, options);
+  }
+  function tokenize(value, options) {
+    if (options.stripTrailingCr) {
+      value = value.replace(/\r\n/g, "\n");
+    }
+    const retLines = [], linesAndNewlines = value.split(/(\n|\r\n)/);
+    if (!linesAndNewlines[linesAndNewlines.length - 1]) {
+      linesAndNewlines.pop();
+    }
+    for (let i2 = 0; i2 < linesAndNewlines.length; i2++) {
+      const line = linesAndNewlines[i2];
+      if (i2 % 2 && !options.newlineIsToken) {
+        retLines[retLines.length - 1] += line;
+      } else {
+        retLines.push(line);
+      }
+    }
+    return retLines;
+  }
+
+  // src/diff.js
+  function renderDiff(diskText, editorText) {
+    const normalizedDisk = diskText.replace(/\r\n/g, "\n");
+    const normalizedEditor = editorText.replace(/\r\n/g, "\n");
+    const diff = diffLines(normalizedDisk, normalizedEditor);
+    let html = "";
+    diff.forEach((part) => {
+      const className = part.added ? "diff-added" : part.removed ? "diff-removed" : "diff-unchanged";
+      const prefix = part.added ? "+ " : part.removed ? "- " : "  ";
+      const lines = part.value.split("\n");
+      if (lines[lines.length - 1] === "") lines.pop();
+      lines.forEach((line) => {
+        const escaped = line.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        html += `<div class="diff-line ${className}"><span class="diff-prefix">${prefix}</span><span>${escaped || "&nbsp;"}</span></div>`;
+      });
+    });
+    return html;
+  }
+
   // src/dialog.js
-  function showConflictDialog() {
+  function showConflictDialog({ diskText, editorText }) {
     return new Promise((resolve) => {
       const modal2 = document.getElementById("conflict-modal");
+      const diffView = document.getElementById("conflict-diff-view");
       const btnCancel = document.getElementById("btn-conflict-cancel");
+      const btnReload = document.getElementById("btn-conflict-reload");
       const btnOverwrite = document.getElementById("btn-conflict-overwrite");
+      diffView.innerHTML = renderDiff(diskText, editorText);
       const cleanup = () => {
         modal2.classList.add("hidden");
+        diffView.innerHTML = "";
         btnCancel.onclick = null;
+        if (btnReload) btnReload.onclick = null;
         btnOverwrite.onclick = null;
       };
       btnCancel.onclick = () => {
         cleanup();
-        resolve(false);
+        resolve("cancel");
       };
+      if (btnReload) {
+        btnReload.onclick = () => {
+          cleanup();
+          resolve("reload");
+        };
+      }
       btnOverwrite.onclick = () => {
         cleanup();
-        resolve(true);
+        resolve("overwrite");
       };
       modal2.classList.remove("hidden");
       btnCancel.focus();
@@ -18640,7 +18924,6 @@ ${err}`, { type: "error" });
   }
 
   // src/main.js
-  console.log("[main.js loaded]", Date.now());
   var wordCounter = document.getElementById("word-counter");
   var fileNameText = document.getElementById("file-name-text");
   var dirtyMark = document.getElementById("dirty-mark");
@@ -18663,6 +18946,11 @@ ${err}`, { type: "error" });
     getEditorText: () => getEditorText(),
     getSettings: () => currentSettings,
     onConflict: showConflictDialog,
+    onReload: (newText) => {
+      setEditorText(newText);
+      setDirty(false);
+      updateWordCount();
+    },
     onSaveSuccess: (path, isAutoSave = false) => {
       currentFilePath = path;
       setDirty(false);

@@ -29,6 +29,11 @@ const saveManager = new SaveManager({
   getEditorText: () => getEditorText(),
   getSettings: () => currentSettings,
   onConflict: showConflictDialog,
+  onReload: (newText) => {
+    setEditorText(newText);
+    setDirty(false);
+    updateWordCount();
+  },
   onSaveSuccess: (path, isAutoSave = false) => {
     currentFilePath = path;
     setDirty(false);
@@ -39,6 +44,7 @@ const saveManager = new SaveManager({
     parseOutlineAndBookmarks();
   }
 });
+
 saveManager.startAutoSave(() => isDirty);
 
 

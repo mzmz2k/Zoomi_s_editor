@@ -1,7 +1,7 @@
 /*ファイル保存、自動保存、バックアップ、および競合検知を担当するモジュール
  */
 export class SaveManager {
-  constructor({ fs, dialog, invoke, getEditorText, getSettings, onSaveSuccess, onConflict }) {
+  constructor({ fs, dialog, invoke, getEditorText, getSettings, onSaveSuccess, onConflict, onReload }) {
     this.fs = fs;
     this.dialog = dialog;
     this.invoke = invoke;
@@ -9,6 +9,7 @@ export class SaveManager {
     this.getSettings = getSettings;
     this.onSaveSuccess = onSaveSuccess;
     this.onConflict = onConflict;
+    this.onReload = onReload;
     
     this.currentFilePath = null;
     this.lastSavedHash = null; // 前回保存/読込時のハッシュ値
@@ -98,22 +99,32 @@ export class SaveManager {
         targetPath = filePath;
 
       } else {
-        // 上書き保存の場合は競合チェックを行う
+
+       // 上書き保存の場合は競合チェックを行う
         const hasConflict = await this.checkConflict(targetPath);
         if (hasConflict) {
-          let yes = false;
-          // カスタムダイアログ（showConflictDialog）が渡されていればそちらを使用
+          let action = 'cancel';
           if (this.onConflict) {
-            yes = await this.onConflict();
+            const diskText = await this.readFileText(targetPath);
+            action = await this.onConflict({ diskText, editorText: this.getEditorText() });
           } else {
-            yes = await this.dialog.ask('ファイルが外部プログラムによって変更されています。\n上書きして保存しますか？', { type: 'warning' });
+            const yes = await this.dialog.ask('ファイルが外部プログラムによって変更されています。\n上書きして保存しますか？', { type: 'warning' });
+            action = yes ? 'overwrite' : 'cancel';
           }
-          
-          if (!yes) return; // キャンセル
+
+          if (action === 'reload') {
+            const diskText = await this.readFileText(targetPath);
+            if (this.onReload) this.onReload(diskText);
+            await this.updateFileInfo(targetPath, diskText);
+            return; // 外部の内容を取り込んだので保存は中止
+          }
+
+          if (action !== 'overwrite') return; // キャンセル
         }
       }
 
       const textToSave = this.getEditorText();
+
 
             
       // 保存する

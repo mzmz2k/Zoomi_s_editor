@@ -105,3 +105,48 @@ input[type="checkbox"]:checked { background-color: var(--highlight-color); borde
 .cm-search label { background: transparent; color: #888; border: 1px solid transparent; border-radius: 3px; font-family: monospace; font-size: 12px; padding: 2px 4px; margin: 0 !important; cursor: pointer; display: flex; align-items: center; } .cm-search label:hover { color: var(--text-color); background: rgba(127,127,127,0.2); } .cm-search label:has(input:checked) { color: var(--text-color); background: rgba(127,127,127,0.3); border-color: rgba(127,127,127,0.5); } .cm-search input[type="checkbox"] { display: none !important; }
 .cm-search input[name="search"] { order: 1; } .cm-search label { order: 2; } .cm-search button[name="findNext"], .cm-search button[name="next"] { order: 3; margin-left: 2px !important; } .cm-search button[name="findPrev"], .cm-search button[name="prev"] { order: 4; } .cm-search button[name="close"] { order: 5; margin-left: auto !important; } .cm-search input[name="replace"] { order: 6; } .cm-search button[name="replace"] { order: 7; margin-left: 2px !important; } .cm-search button[name="replaceAll"] { order: 8; }
 .cm-search button[name="selectMatches"], .cm-search button[name="select"], .cm-search br { display: none !important; }
+
+/* 競合差分ダイアログ */
+.diff-container {
+  max-height: 280px;
+  overflow-y: auto;
+  background: #1e1e1e;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: left;
+  padding: 8px;
+  margin: 12px 0 16px 0;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.diff-line {
+  display: flex;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.diff-prefix {
+  user-select: none;
+  width: 22px;
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
+.diff-added {
+  background: rgba(46, 160, 67, 0.25);
+  color: #7ee787;
+}
+
+.diff-removed {
+  background: rgba(248, 81, 73, 0.25);
+  color: #ffa198;
+}
+
+.diff-unchanged {
+  color: #8b949e;
+  opacity: 0.8;
+}

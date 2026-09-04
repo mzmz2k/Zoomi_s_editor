@@ -1,32 +1,43 @@
-/* HTMLベースのカスタムダイアログの表示・非表示を管理するモジュール
- */
-export function showConflictDialog() {
+/* HTMLベースのカスタムダイアログの表示・非表示を管理するモジュール */
+import { renderDiff } from './diff.js';
+
+export function showConflictDialog({ diskText, editorText }) {
   return new Promise((resolve) => {
     const modal = document.getElementById('conflict-modal');
+    const diffView = document.getElementById('conflict-diff-view');
     const btnCancel = document.getElementById('btn-conflict-cancel');
+    const btnReload = document.getElementById('btn-conflict-reload');
     const btnOverwrite = document.getElementById('btn-conflict-overwrite');
 
-    // ボタンが押されたらダイアログを閉じ、イベントを消去する
+    // 差分を描画
+    diffView.innerHTML = renderDiff(diskText, editorText);
+
     const cleanup = () => {
       modal.classList.add('hidden');
+      diffView.innerHTML = '';
       btnCancel.onclick = null;
+      if (btnReload) btnReload.onclick = null;
       btnOverwrite.onclick = null;
     };
 
-    // キャンセルが押されたら false を返す
     btnCancel.onclick = () => {
       cleanup();
-      resolve(false);
+      resolve('cancel');
     };
 
-    // 上書きが押されたら true を返す
+    if (btnReload) {
+      btnReload.onclick = () => {
+        cleanup();
+        resolve('reload');
+      };
+    }
+
     btnOverwrite.onclick = () => {
       cleanup();
-      resolve(true);
+      resolve('overwrite');
     };
 
-    // 画面に表示して、安全のためにキャンセルボタンにフォーカスを当てる
     modal.classList.remove('hidden');
-    btnCancel.focus(); 
+    btnCancel.focus();
   });
 }

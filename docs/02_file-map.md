@@ -21,6 +21,7 @@ Zoomi_s_editor/
 │   │   └── tauri.svg
 │   ├── bundle.js
 │   ├── dialog.js
+│   ├── diff.js
 │   ├── index.html
 │   ├── layout.js
 │   ├── main.js
@@ -61,6 +62,12 @@ Zoomi_s_editor/
   └── import $lib/components
   └── import lucide-svelte
 
+📄 `src/dialog.js`
+  └── import ./diff.js
+
+📄 `src/diff.js`
+  └── import diff
+
 📄 `src/main.js`
   └── import @codemirror/view
   └── import @codemirror/state
@@ -89,7 +96,9 @@ Zoomi_s_editor/
 ### src/
 - `src/bundle.js` : （説明未記載）
 - `src/dialog.js` : HTMLベースのカスタムダイアログの表示・非表示を管理するモジュール
-  - `export function showConflictDialog()`
+  - `export function showConflictDialog({ diskText, editorText })`
+- `src/diff.js` : テキスト差分（Diff）計算およびHTML整形を行うモジュール
+  - `export function renderDiff(diskText, editorText)`
 - `src/layout.js` : src/layout.js
   - `export function initLayout(options)`
   - `export function toggleOutline()`

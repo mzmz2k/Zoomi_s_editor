@@ -349,11 +349,17 @@
 
 <!-- 競合確認用のカスタムダイアログ -->
 <div id="conflict-modal" class="modal hidden" style="z-index: 10000; position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.6);">
-  <div style="background: var(--menu-bg); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 24px; max-width: 400px; text-align: center; color: var(--text-color); box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);">
-    <p style="margin: 0 0 24px 0; line-height: 1.6; font-size: 14px;">ファイルが外部プログラムによって変更されています。<br>強制的に上書きして保存しますか？</p>
-    <div style="display: flex; justify-content: center; gap: 16px;">
-      <button id="btn-conflict-cancel" class="btn">キャンセル</button>
-      <button id="btn-conflict-overwrite" class="btn" style="background: #d9534f; color: #fff; border-color: #d43f3a;">上書きする</button>
+  <div style="background: var(--menu-bg); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 20px 24px; width: 90%; max-width: 650px; text-align: left; color: var(--text-color); box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5); max-height: 85vh; display: flex; flex-direction: column;">
+    <h3 style="margin: 0 0 8px 0; font-size: 16px; color: var(--text-color);">ファイルの競合を検知しました</h3>
+    <p style="margin: 0 0 8px 0; line-height: 1.5; font-size: 13px; opacity: 0.9;">
+      外部プログラムによってファイルが変更されています。<br>
+      <span style="color: #ffa198;">- 赤：外部ファイルの内容</span> / <span style="color: #7ee787;">+ 緑：このエディタの内容</span>
+    </p>
+    <div id="conflict-diff-view" class="diff-container"></div>
+    <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: auto;">
+      <button id="btn-conflict-cancel" class="btn btn-cancel">キャンセル</button>
+      <button id="btn-conflict-reload" class="btn">外部の変更を読み込む</button>
+      <button id="btn-conflict-overwrite" class="btn" style="background: #d9534f; color: #fff; border-color: #d43f3a;">強制上書き保存</button>
     </div>
   </div>
 </div>
