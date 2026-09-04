@@ -1,6 +1,6 @@
 :root {
-  --bg-color: #2c2c2c; --menu-bg: #222222; --text-color: #f4f4f4; --titlebar-bg: #5a4c4c; --selection-color: rgba(255, 255, 255, 0.2);
-  --highlight-color: #007acc; --titlebar-text: #adadad; --counter-color: #727272; --active-line-color: transparent;
+  --bg-color: #0f0f0f; --menu-bg: #222222; --text-color: #f4f4f4; --titlebar-bg: #5e2b2b; --selection-color: rgba(255, 255, 255, 0.2);
+  --highlight-color: #1b5d88; --titlebar-text: #adadad; --counter-color: #727272; --active-line-color: transparent;
   --sidebar-width: 250px; --preview-size: 350px; /* ★ 幅・高さの兼用変数 */
   --max-width: 100%; --max-height: 100%;
   --font-size: 16px; --line-height: 1.8; /* ★ これをCodeMirrorに確実に適用させる */
@@ -25,10 +25,35 @@ body { margin: 0; padding: 0; background-color: var(--bg-color); color: var(--te
 .file-name { font-size: 12px; pointer-events: none; position: absolute; top: 0; left: 50px; height: 30px; display: flex; align-items: center; max-width: 300px; color: var(--titlebar-text); }
 .word-counter { position: absolute; bottom: 15px; right: 15px; font-size: 12px; color: var(--counter-color); pointer-events: none; z-index: 20; }
 
-.titlebar-buttons { display: flex; gap: 8px; height: 100%; align-items: center; } .titlebar-button { width: 12px; height: 12px; border-radius: 50%; cursor: pointer; }
-.titlebar-button.close { background: #ff5f56; } .titlebar-button.minimize { background: #ffbd2e; } .titlebar-button.maximize { background: #27c93f; } .titlebar-button span { display: none; }
-body.btn-style-windows .titlebar-buttons { gap: 0; } body.btn-style-windows .titlebar-button { width: 36px; height: 100%; border-radius: 0; background: transparent; color: var(--titlebar-text); display: flex; justify-content: center; align-items: center; }
-body.btn-style-windows .titlebar-button span { display: block; font-size: 14px; line-height: 1; margin-top: 2px; } body.btn-style-windows .titlebar-button:hover { background: rgba(127,127,127,0.2); } body.btn-style-windows .titlebar-button.close:hover { background: #ff5f56; color: white; }
+.titlebar-buttons { display: flex; gap: 8px; height: 100%; align-items: center; } 
+.titlebar-button { 
+  width: 12px; 
+  height: 12px; 
+  border-radius: 50%; 
+  cursor: pointer; 
+  opacity: 0.85; /* 通常時はタイトルバーの色に馴染むよう透明度を設定 */
+  transition: opacity 0.15s ease;
+}
+.titlebar-button:hover { 
+  opacity: 1; /* ホバー時は鮮やかに表示 */
+}
+.titlebar-button.close { background: #ff5e56; } 
+.titlebar-button.minimize { background: #ffbd2e; } 
+.titlebar-button.maximize { background: #27c93f; } 
+.titlebar-button span { display: none; }
+
+body.btn-style-windows .titlebar-buttons { gap: 0; } 
+body.btn-style-windows .titlebar-button { 
+  width: 36px; 
+  height: 100%; 
+  border-radius: 0; 
+  background: transparent; 
+  color: var(--titlebar-text); 
+  display: flex; 
+  justify-content: center; 
+  align-items: center; 
+  opacity: 1; /* Windowsスタイル時は透明度を通常に戻す */
+}
 
 ::-webkit-scrollbar { width: 6px; height: 6px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: rgba(127,127,127,0.3); border-radius: 5px; } ::-webkit-scrollbar-thumb:hover { background: rgba(127,127,127,0.5); }
 
