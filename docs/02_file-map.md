@@ -19,6 +19,7 @@ Zoomi_s_editor/
 │   ├── assets
 │   │   ├── javascript.svg
 │   │   └── tauri.svg
+│   ├── build.js
 │   ├── bundle.js
 │   ├── dialog.js
 │   ├── diff.js
@@ -62,6 +63,10 @@ Zoomi_s_editor/
   └── import $lib/components
   └── import lucide-svelte
 
+📄 `src/build.js`
+  └── import esbuild
+  └── import fs
+
 📄 `src/dialog.js`
   └── import ./diff.js
 
@@ -98,6 +103,7 @@ Zoomi_s_editor/
 - `scripts/generate_filemap.test.js` : （説明未記載）
 
 ### src/
+- `src/build.js` : esbuild を実行し、アプリバージョンとビルド日を自動注入するビルドスクリプト
 - `src/bundle.js` : （説明未記載）
 - `src/dialog.js` : HTMLベースのカスタムダイアログの表示・非表示を管理するモジュール
   - `export function showConflictDialog({ diskText, editorText })`

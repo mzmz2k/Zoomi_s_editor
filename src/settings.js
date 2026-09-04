@@ -249,6 +249,12 @@ function setupSettingsModalEvents() {
   const dropdown = document.getElementById('dropdown-menu');
   const modal = document.getElementById('settings-modal');
 
+  // バージョンとビルド日を反映
+  const verEl = document.getElementById('app-version');
+  const dateEl = document.getElementById('build-date');
+  if (verEl) verEl.textContent = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev';
+  if (dateEl) dateEl.textContent = typeof __BUILD_DATE__ !== 'undefined' ? __BUILD_DATE__ : 'dev';
+
   document.getElementById('select-custom-ol')?.addEventListener('change', updateCustomOptions);
   document.getElementById('input-custom-reg')?.addEventListener('input', testCustomReg);
   document.getElementById('test-custom-text')?.addEventListener('input', testCustomReg);
