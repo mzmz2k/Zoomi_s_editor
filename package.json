@@ -1,7 +1,7 @@
 {
   "name": "Zoomi's editor",
   "private": true,
-  "version": "1.4.6",
+  "version": "1.5.0",
   "type": "module",
   "scripts": {
     "tauri": "tauri",
@@ -19,6 +19,7 @@
     "@tauri-apps/plugin-fs": "^2.5.1",
     "@tauri-apps/plugin-window-state": "^2.4.1",
     "diff": "^9.0.0",
+    "esbuild": "^0.28.2",
     "lucide": "^1.40.0",
     "textarea-caret": "^3.1.0"
   }
