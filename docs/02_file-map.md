@@ -79,6 +79,10 @@ Zoomi_s_editor/
   └── import ./outline.js
   └── import ./settings.js
   └── import ./layout.js
+  └── import lucide
+
+📄 `src/outline.js`
+  └── import lucide
 
 📄 `src/save.test.js`
   └── import vitest
