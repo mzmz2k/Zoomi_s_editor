@@ -114,7 +114,20 @@ body.btn-style-windows .titlebar-button {
 .modal-body { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; } .tab-panel { flex: 1; }
 .setting-group { margin-bottom: 12px; display: flex; flex-direction: row; justify-content: space-between; align-items: center; font-size: 13px; } .setting-column { flex-direction: column; align-items: flex-start; gap: 5px; font-size: 13px; margin-bottom: 12px;} .setting-column input[type="text"] { width: 100% !important; box-sizing: border-box; }
 
-.setting-group input:not([type="color"]):not([type="checkbox"]), .setting-group select, .setting-column select { background: var(--bg-color); color: var(--text-color); border: 1px solid rgba(127,127,127,0.4); padding: 4px; border-radius: 4px; width: 130px; outline:none; font-family: inherit;}
+.setting-group input:not([type="color"]):not([type="checkbox"]), 
+.setting-group select, 
+.setting-column select,
+.setting-column input:not([type="color"]):not([type="checkbox"]) { 
+  background: var(--bg-color); 
+  color: var(--text-color); 
+  border: 1px solid rgba(127,127,127,0.4); 
+  padding: 4px; 
+  border-radius: 4px; 
+  width: 130px; 
+  outline: none; 
+  font-family: inherit;
+}
+
 .setting-group select option, .setting-column select option { background: var(--bg-color); color: var(--text-color); }
 .setting-group input[type="color"] { border: none; border-radius: 4px; width: 60px; height: 26px; cursor: pointer; background: none; padding: 0; }
 
