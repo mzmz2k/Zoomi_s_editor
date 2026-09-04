@@ -1,7 +1,7 @@
 # プロジェクトの基本情報とルール
 
 ## コンセプト
-小説執筆にも使える、レスポンスの早いシンプルなテキストエディタ。
+小説執筆にも使える、レスポンスが早くUIがシンプルなテキストエディタ。
 
 ## 技術スタック
 - ターゲットOS: Windows (MSIインストーラー形式)
@@ -34,3 +34,17 @@
 - Tauri v2の書き方に準拠すること（v1のAPIや古い構文を使用しない）。
 - フレームワーク（React, Vue, Svelte等）を使用しないシンプルな構成のため、DOM操作やCodeMirrorのExtension管理を破綻させない設計に留めること。
 - ウィンドウ枠を消去（`decorations: false`）しているため、ドラッグ移動可能な領域（`data-tauri-drag-region`）や閉じる/最小化ボタンのJS制御を意識すること。
+
+### 3.色テーマ対応
+ダーク・ライト・羊皮紙テーマがあり、ユーザーが自由にカスタムすることも可能。
+どのテーマでも文字が読めて違和感のない配色を設定する。
+変数と初期値は以下の通り。
+  --bg-color: #090909; 
+  --menu-bg: #222222; 
+  --titlebar-bg: #321f1f; 
+  --text-color: #f4f4f4; 
+  --selection-color: rgba(255, 255, 255, 0.2);
+  --highlight-color: #1b5d88; 
+  --titlebar-text: #adadad; 
+  --counter-color: #727272; 
+  --active-line-color: transparent;
