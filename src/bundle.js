@@ -18329,6 +18329,41 @@ ${err}`, { type: "error" });
     { id: "sc-text2", label: "\u30C6\u30AD\u30B9\u30C8\u30BB\u30C3\u30C8 2 \u9069\u7528" },
     { id: "sc-text3", label: "\u30C6\u30AD\u30B9\u30C8\u30BB\u30C3\u30C8 3 \u9069\u7528" }
   ];
+  var themePresets = {
+    p_dark: {
+      bg: "#090909",
+      mBg: "#222222",
+      title: "#321f1f",
+      text: "#f4f4f4",
+      sel: "#ffffff",
+      hl: "#1b5d88",
+      tText: "#adadad",
+      cText: "#727272",
+      actCol: "#ffffff"
+    },
+    p_light: {
+      bg: "#ffffff",
+      mBg: "#f9f9f9",
+      title: "#f0f0f0",
+      text: "#333333",
+      sel: "#000000",
+      hl: "#007acc",
+      tText: "#666666",
+      cText: "#888888",
+      actCol: "#000000"
+    },
+    p_parchment: {
+      bg: "#f4ecd8",
+      mBg: "#e8ddc0",
+      title: "#e6daba",
+      text: "#4a3623",
+      sel: "#5c4033",
+      hl: "#8b5a2b",
+      tText: "#5c4033",
+      cText: "#8b7355",
+      actCol: "#5c4033"
+    }
+  };
   var currentSettings = {
     fontSize: 16,
     lh: 1.8,
@@ -18343,21 +18378,22 @@ ${err}`, { type: "error" });
     fadeRangeBottom: 100,
     fadeOpacity: 0.8,
     activeLineEnabled: false,
-    activeLineColor: "#ffffff",
     btnStyle: "mac",
     backupEnabled: true,
     backupDir: "",
     autoSaveEnabled: true,
     sidebarWidth: 250,
     previewSize: 350,
-    bgColor: "#2c2c2c",
-    menuBg: "#222222",
-    titlebarBg: "#4a4444",
-    textColor: "#f4f4f4",
-    selectionColor: "#ffffff",
-    highlightColor: "#007acc",
-    titlebarText: "#adadad",
-    counterColor: "#727272",
+    // ★ 初期設定はダークテーマの定義を自動参照
+    bgColor: themePresets.p_dark.bg,
+    menuBg: themePresets.p_dark.mBg,
+    titlebarBg: themePresets.p_dark.title,
+    textColor: themePresets.p_dark.text,
+    selectionColor: themePresets.p_dark.sel,
+    highlightColor: themePresets.p_dark.hl,
+    titlebarText: themePresets.p_dark.tText,
+    counterColor: themePresets.p_dark.cText,
+    activeLineColor: themePresets.p_dark.actCol,
     olMd: true,
     olLevels: { 1: ["pre_chap"], 2: ["pre_sec"], 3: ["pre_bra", "pre_sym"] },
     olCustoms: { 1: { n: "\u30AB\u30B9\u30BF\u30E01", r: "" }, 2: { n: "\u30AB\u30B9\u30BF\u30E02", r: "" }, 3: { n: "\u30AB\u30B9\u30BF\u30E03", r: "" }, 4: { n: "\u30AB\u30B9\u30BF\u30E04", r: "" }, 5: { n: "\u30AB\u30B9\u30BF\u30E05", r: "" }, 6: { n: "\u30AB\u30B9\u30BF\u30E06", r: "" } },
@@ -18585,15 +18621,16 @@ ${err}`, { type: "error" });
     });
     document.getElementById("btn-apply-theme")?.addEventListener("click", () => {
       const val = document.getElementById("select-theme-load").value;
-      if (val === "p_dark") applyThemePreset({ bg: "#2c2c2c", mBg: "#222222", title: "#573d3d", text: "#f4f4f4", sel: "#ffffff", hl: "#007acc", tText: "#adadad", cText: "#727272", actCol: "#ffffff" });
-      else if (val === "p_light") applyThemePreset({ bg: "#ffffff", mBg: "#f9f9f9", title: "#f0f0f0", text: "#333333", sel: "#000000", hl: "#007acc", tText: "#666666", cText: "#888888", actCol: "#000000" });
-      else if (val === "p_parchment") applyThemePreset({ bg: "#f4ecd8", mBg: "#e8ddc0", title: "#e6daba", text: "#4a3623", sel: "#5c4033", hl: "#8b5a2b", tText: "#5c4033", cText: "#8b7355", actCol: "#5c4033" });
-      else {
+      if (themePresets[val]) {
+        applyThemePreset(themePresets[val]);
+      } else {
         const s = localStorage.getItem(`theme-slot-${val.replace("c_", "")}`);
         if (s) {
           const t2 = JSON.parse(s);
           applyThemePreset({ bg: t2.bg, mBg: t2.mBg || t2.bg, title: t2.title, text: t2.text, sel: t2.sel, hl: t2.hl || "#007acc", tText: t2.tText || "#adadad", cText: t2.cText || "#727272", actCol: t2.aCol || "#ffffff" });
-        } else alert("\u305D\u306E\u30B9\u30ED\u30C3\u30C8\u306F\u7A7A\u3067\u3059");
+        } else {
+          alert("\u305D\u306E\u30B9\u30ED\u30C3\u30C8\u306F\u7A7A\u3067\u3059");
+        }
       }
     });
     document.getElementById("btn-save-theme-slot")?.addEventListener("click", () => {

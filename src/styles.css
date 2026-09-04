@@ -1,14 +1,26 @@
 :root {
-  --bg-color: #0f0f0f; --menu-bg: #222222; --text-color: #f4f4f4; --titlebar-bg: #5e2b2b; --selection-color: rgba(255, 255, 255, 0.2);
-  --highlight-color: #1b5d88; --titlebar-text: #adadad; --counter-color: #727272; --active-line-color: transparent;
-  --sidebar-width: 250px; --preview-size: 350px; /* ★ 幅・高さの兼用変数 */
-  --max-width: 100%; --max-height: 100%;
-  --font-size: 16px; --line-height: 1.8; /* ★ これをCodeMirrorに確実に適用させる */
+  /* テーマカラー初期値（themePresets.p_dark と一致） */
+  --bg-color: #090909; 
+  --menu-bg: #222222; 
+  --titlebar-bg: #321f1f; 
+  --text-color: #f4f4f4; 
+  --selection-color: rgba(255, 255, 255, 0.2);
+  --highlight-color: #1b5d88; 
+  --titlebar-text: #adadad; 
+  --counter-color: #727272; 
+  --active-line-color: transparent;
+
+  /* レイアウト・エディタ設定 */
+  --sidebar-width: 250px; 
+  --preview-size: 350px;
+  --max-width: 100%; 
+  --max-height: 100%;
+  --font-size: 16px; 
+  --line-height: 1.8;
   --ui-font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', sans-serif; 
   --editor-font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', sans-serif; 
   --preview-font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', sans-serif;
 }
-
 body { margin: 0; padding: 0; background-color: var(--bg-color); color: var(--text-color); font-family: var(--ui-font-family); overflow: hidden; }
 
 /* タイトルバー周り */

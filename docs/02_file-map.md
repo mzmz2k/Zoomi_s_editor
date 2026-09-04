@@ -116,6 +116,7 @@ Zoomi_s_editor/
 - `src/settings.js` : 設定・テーマ・ショートカットの管理および設定画面UIモジュール
   - `export const defaultPresets`
   - `export const shortcutDefs`
+  - `export const themePresets`
   - `export const currentSettings`
   - `export const shortcuts`
   - `export function hexToRgba(hex, alpha)`
