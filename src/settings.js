@@ -38,7 +38,7 @@ export const themePresets = {
 
 export const currentSettings = {
   fontSize: 16, lh: 1.8, lineLength: 0, editorFont: "", uiFont: "", previewFont: "", countNewline: false, typewriterMode: false, fadeEnabled: false, fadeRangeTop: 100, fadeRangeBottom: 100, fadeOpacity: 0.8,
-  activeLineEnabled: false, btnStyle: "mac", backupEnabled: true, backupDir: "", autoSaveEnabled: true, sidebarWidth: 250, previewSize: 350,
+  activeLineEnabled: false, btnStyle: "mac", backupEnabled: true, backupDir: "", autoSaveEnabled: true, sidebarWidth: 250, previewSize: 350, skipCloseUnsavedWarning: false,
   
   // ★ 初期設定はダークテーマの定義を自動参照
   bgColor: themePresets.p_dark.bg,
@@ -123,6 +123,12 @@ export function loadSettings() {
   Object.assign(currentSettings, saved);
   const savedShortcuts = JSON.parse(localStorage.getItem('zoomi-shortcuts') || '{}');
   Object.assign(shortcuts, savedShortcuts);
+
+  // 追加: 既存ユーザーなどでキーが存在しない場合のデフォルト値（false = 警告する）を担保
+  if (typeof currentSettings.skipCloseUnsavedWarning !== 'boolean') {
+    currentSettings.skipCloseUnsavedWarning = false;
+  }
+
   applySettingsToStyle();
 }
 
@@ -443,4 +449,17 @@ function setupSettingsModalEvents() {
     document.getElementById('display-backup-dir').textContent = "未設定 (ファイルと同じ場所に/backupを作成)";
     document.getElementById('display-backup-dir').dataset.path = "";
   });
+
+  // 終了時未保存警告スキップのチェックボックス初期化とイベント登録
+  const setSkipCloseUnsaved = document.getElementById('set-skip-close-unsaved-warning');
+  if (setSkipCloseUnsaved) {
+    // 1. 設定値を画面のチェックボックスに反映
+    setSkipCloseUnsaved.checked = !!currentSettings.skipCloseUnsavedWarning;
+
+    // 2. チェック変更時に currentSettings を更新して永続化
+    setSkipCloseUnsaved.addEventListener('change', (e) => {
+      currentSettings.skipCloseUnsavedWarning = e.target.checked;
+      saveAllSettings();
+    });
+  }
 }

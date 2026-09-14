@@ -85,9 +85,10 @@ export class SaveManager {
 
   /**
    * 手動保存処理
+   * * @returns {Promise<boolean>} 保存成功時は true、キャンセルまたは失敗時は false
    */
   async saveFile(isSaveAs = false) {
-    if (this.isSaving) return;
+    if (this.isSaving) return false;
     this.isSaving = true;
 
     try {
@@ -95,7 +96,7 @@ export class SaveManager {
       
       if (!targetPath || isSaveAs) {
         const filePath = await this.dialog.save({ filters: [{ name: 'Text', extensions: ['txt', 'md'] }] });
-        if (!filePath) return;
+        if (!filePath) return false;
         targetPath = filePath;
 
       } else {
@@ -116,10 +117,10 @@ export class SaveManager {
             const diskText = await this.readFileText(targetPath);
             if (this.onReload) this.onReload(diskText);
             await this.updateFileInfo(targetPath, diskText);
-            return; // 外部の内容を取り込んだので保存は中止
+            return false; // 外部の内容を取り込んだので保存は中止
           }
 
-          if (action !== 'overwrite') return; // キャンセル
+          if (action !== 'overwrite') return false; // キャンセル
         }
       }
 
@@ -134,8 +135,10 @@ export class SaveManager {
       if (this.onSaveSuccess) {
         this.onSaveSuccess(targetPath, false); // isAutoSave = false
       }
+      return true;
     } catch (err) {
       await this.dialog.message(`保存失敗。\n${err}`, { type: 'error' });
+      return false;
     } finally {
       this.isSaving = false;
     }

@@ -125,6 +125,7 @@ Zoomi_s_editor/
 - `src/bundle.js` : （説明未記載）
 - `src/dialog.js` : HTMLベースのカスタムダイアログの表示・非表示を管理するモジュール
   - `export function showConflictDialog({ diskText, editorText })`
+  - `export function showUnsavedDialog()`
 - `src/diff.js` : テキスト差分（Diff）計算およびHTML整形を行うモジュール
   - `export function renderDiff(diskText, editorText)`
 - `src/layout.js` : src/layout.js

@@ -17759,15 +17759,16 @@
     }
     /**
      * 手動保存処理
+     * * @returns {Promise<boolean>} 保存成功時は true、キャンセルまたは失敗時は false
      */
     async saveFile(isSaveAs = false) {
-      if (this.isSaving) return;
+      if (this.isSaving) return false;
       this.isSaving = true;
       try {
         let targetPath = this.currentFilePath;
         if (!targetPath || isSaveAs) {
           const filePath = await this.dialog.save({ filters: [{ name: "Text", extensions: ["txt", "md"] }] });
-          if (!filePath) return;
+          if (!filePath) return false;
           targetPath = filePath;
         } else {
           const hasConflict = await this.checkConflict(targetPath);
@@ -17784,9 +17785,9 @@
               const diskText = await this.readFileText(targetPath);
               if (this.onReload) this.onReload(diskText);
               await this.updateFileInfo(targetPath, diskText);
-              return;
+              return false;
             }
-            if (action !== "overwrite") return;
+            if (action !== "overwrite") return false;
           }
         }
         const textToSave = this.getEditorText();
@@ -17795,9 +17796,11 @@
         if (this.onSaveSuccess) {
           this.onSaveSuccess(targetPath, false);
         }
+        return true;
       } catch (err) {
         await this.dialog.message(`\u4FDD\u5B58\u5931\u6557\u3002
 ${err}`, { type: "error" });
+        return false;
       } finally {
         this.isSaving = false;
       }
@@ -18168,6 +18171,32 @@ ${err}`, { type: "error" });
       btnCancel.focus();
     });
   }
+  function showUnsavedDialog() {
+    return new Promise((resolve) => {
+      const modal2 = document.getElementById("unsaved-modal");
+      const btnSave = document.getElementById("btn-unsaved-save");
+      const btnDiscard = document.getElementById("btn-unsaved-discard");
+      const btnCancel = document.getElementById("btn-unsaved-cancel");
+      if (!modal2 || !btnSave || !btnDiscard || !btnCancel) {
+        resolve("cancel");
+        return;
+      }
+      const cleanup = (result) => {
+        btnSave.removeEventListener("click", onSave);
+        btnDiscard.removeEventListener("click", onDiscard);
+        btnCancel.removeEventListener("click", onCancel);
+        modal2.classList.add("hidden");
+        resolve(result);
+      };
+      const onSave = () => cleanup("save");
+      const onDiscard = () => cleanup("dontsave");
+      const onCancel = () => cleanup("cancel");
+      btnSave.addEventListener("click", onSave);
+      btnDiscard.addEventListener("click", onDiscard);
+      btnCancel.addEventListener("click", onCancel);
+      modal2.classList.remove("hidden");
+    });
+  }
 
   // node_modules/lucide/dist/esm/defaultAttributes.mjs
   var defaultAttributes = {
@@ -18455,6 +18484,7 @@ ${err}`, { type: "error" });
     autoSaveEnabled: true,
     sidebarWidth: 250,
     previewSize: 350,
+    skipCloseUnsavedWarning: false,
     // ★ 初期設定はダークテーマの定義を自動参照
     bgColor: themePresets.p_dark.bg,
     menuBg: themePresets.p_dark.mBg,
@@ -18528,6 +18558,9 @@ ${err}`, { type: "error" });
     Object.assign(currentSettings, saved);
     const savedShortcuts = JSON.parse(localStorage.getItem("zoomi-shortcuts") || "{}");
     Object.assign(shortcuts, savedShortcuts);
+    if (typeof currentSettings.skipCloseUnsavedWarning !== "boolean") {
+      currentSettings.skipCloseUnsavedWarning = false;
+    }
     applySettingsToStyle();
   }
   function saveAllSettings() {
@@ -18815,6 +18848,14 @@ ${err}`, { type: "error" });
       document.getElementById("display-backup-dir").textContent = "\u672A\u8A2D\u5B9A (\u30D5\u30A1\u30A4\u30EB\u3068\u540C\u3058\u5834\u6240\u306B/backup\u3092\u4F5C\u6210)";
       document.getElementById("display-backup-dir").dataset.path = "";
     });
+    const setSkipCloseUnsaved = document.getElementById("set-skip-close-unsaved-warning");
+    if (setSkipCloseUnsaved) {
+      setSkipCloseUnsaved.checked = !!currentSettings.skipCloseUnsavedWarning;
+      setSkipCloseUnsaved.addEventListener("change", (e) => {
+        currentSettings.skipCloseUnsavedWarning = e.target.checked;
+        saveAllSettings();
+      });
+    }
   }
 
   // src/layout.js
@@ -19090,19 +19131,38 @@ ${err}`, { type: "error" });
     isDirty = val;
     updateTitleDisplay();
   }
-  document.getElementById("titlebar-close").addEventListener("click", async () => {
+  async function finalizeAppClose() {
     if (currentFilePath && isDirty) {
       try {
         await saveManager.createBackup();
-        await appWindow.destroy();
       } catch (err) {
         const yes = await ask(`\u30D0\u30C3\u30AF\u30A2\u30C3\u30D7\u5931\u6557\u3002
 \u7D42\u4E86\u3057\u307E\u3059\u304B\uFF1F`, { type: "error" });
-        if (yes) await appWindow.destroy();
+        if (!yes) return;
+      }
+    }
+    await appWindow.destroy();
+  }
+  async function handleAppClose() {
+    if (isDirty && !currentSettings.skipCloseUnsavedWarning) {
+      const result = await showUnsavedDialog();
+      if (result === "save") {
+        const saved = await saveManager.saveFile(false);
+        if (!saved) return;
+        await finalizeAppClose();
+      } else if (result === "dontsave") {
+        await finalizeAppClose();
       }
     } else {
-      await appWindow.destroy();
+      await finalizeAppClose();
     }
+  }
+  document.getElementById("titlebar-close").addEventListener("click", () => {
+    handleAppClose();
+  });
+  appWindow.onCloseRequested(async (event) => {
+    event.preventDefault();
+    await handleAppClose();
   });
   document.getElementById("titlebar-minimize").addEventListener("click", () => appWindow.minimize());
   document.getElementById("titlebar-maximize").addEventListener("click", async () => {

@@ -4,7 +4,7 @@ import { defaultKeymap, history, historyKeymap, insertNewline } from "@codemirro
 import { search, searchKeymap, openSearchPanel, closeSearchPanel } from "@codemirror/search"; 
 import { highlightActiveLine } from "@codemirror/view"; 
 import { SaveManager } from "./save.js";
-import { showConflictDialog } from "./dialog.js";
+import { showConflictDialog, showUnsavedDialog } from "./dialog.js";
 import { initOutline, parseOutlineAndBookmarks } from "./outline.js";
 import { currentSettings, shortcuts, defaultPresets, shortcutDefs, hexToRgba, applySettingsToStyle, loadSettings, saveAllSettings, initSettingsUI, loadTextSlotData } from "./settings.js";
 import { initLayout, toggleOutline, cyclePreview, syncPreviewToPos, updatePreviewContent } from "./layout.js";
@@ -63,7 +63,43 @@ function setDirty(val) {
   updateTitleDisplay();
 }
 
-document.getElementById('titlebar-close').addEventListener('click', async () => { if (currentFilePath && isDirty) { try { await saveManager.createBackup(); await appWindow.destroy(); } catch (err) { const yes = await ask(`バックアップ失敗。\n終了しますか？`, { type: 'error' }); if (yes) await appWindow.destroy(); } } else { await appWindow.destroy(); } });
+async function finalizeAppClose() {
+  if (currentFilePath && isDirty) {
+    try {
+      await saveManager.createBackup();
+    } catch (err) {
+      const yes = await ask(`バックアップ失敗。\n終了しますか？`, { type: 'error' });
+      if (!yes) return;
+    }
+  }
+  await appWindow.destroy();
+}
+
+async function handleAppClose() {
+  if (isDirty && !currentSettings.skipCloseUnsavedWarning) {
+    const result = await showUnsavedDialog();
+    if (result === 'save') {
+      const saved = await saveManager.saveFile(false);
+      if (!saved) return; // 保存キャンセル・失敗時は終了を中止
+      await finalizeAppClose();
+    } else if (result === 'dontsave') {
+      await finalizeAppClose();
+    }
+    // result === 'cancel' の場合は何もしない（エディタへ戻る）
+  } else {
+    await finalizeAppClose();
+  }
+}
+
+document.getElementById('titlebar-close').addEventListener('click', () => {
+  handleAppClose();
+});
+
+appWindow.onCloseRequested(async (event) => {
+  event.preventDefault();
+  await handleAppClose();
+});
+
 document.getElementById('titlebar-minimize').addEventListener('click', () => appWindow.minimize());
 document.getElementById('titlebar-maximize').addEventListener('click', async () => { if (await appWindow.isMaximized()) appWindow.unmaximize(); else appWindow.maximize(); });
 
