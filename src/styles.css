@@ -253,3 +253,19 @@ input[type="checkbox"]:checked { background-color: var(--highlight-color); borde
 .sb-btn svg {
   display: block;
 }
+
+/* テーマのテキスト色と危険色をブレンドしたアウトラインボタン */
+.btn-danger-outline {
+  background: transparent;
+  /* 枠線: テキスト色を20%混ぜてテーマになじませる */
+  border: 1px solid color-mix(in srgb, var(--text-color) 20%, rgba(224, 75, 75, 0.5));
+  /* 文字色: テキスト色を35%混ぜることで、明るい背景でも暗い背景でもコントラストを維持 */
+  color: color-mix(in srgb, var(--text-color) 35%, #d93838);
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.btn-danger-outline:hover {
+  background: color-mix(in srgb, var(--menu-bg), #d93838 15%);
+  border-color: color-mix(in srgb, var(--text-color) 30%, #d93838);
+}
