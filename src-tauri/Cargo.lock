@@ -3,7 +3,7 @@
 version = 4
 
 [[package]]
-name = "DraftEditor"
+name = "Zoomis_Editor"
 version = "1.5.0"
 dependencies = [
  "encoding_rs",
