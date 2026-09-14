@@ -5,6 +5,9 @@ Zoomi_s_editor/
 ├── .githooks
 │   ├── _pre-push
 │   └── pre-commit
+├── .github
+│   └── workflows
+│       └── release.yml
 ├── .gitignore
 ├── .vscode
 │   └── extensions.json

@@ -99,7 +99,13 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_window_state::Builder::default().build())
+        // ウィンドウがフォーカスを取り戻した際、WebView2側の入力ルーティングが
+        // 追いついていないことがあるため、OS側フォーカスを明示的に取り直す
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::Focused(true) = event {
+                let _ = window.set_focus();
+            }
+        })
         .invoke_handler(tauri::generate_handler![
             greet,
             get_startup_file,

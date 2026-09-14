@@ -18643,8 +18643,8 @@ ${err}`, { type: "error" });
     const modal2 = document.getElementById("settings-modal");
     const verEl = document.getElementById("app-version");
     const dateEl = document.getElementById("build-date");
-    if (verEl) verEl.textContent = true ? "1.5.0" : "dev";
-    if (dateEl) dateEl.textContent = true ? "2026-09-04" : "dev";
+    if (verEl) verEl.textContent = typeof __APP_VERSION__ !== "undefined" ? __APP_VERSION__ : "dev";
+    if (dateEl) dateEl.textContent = typeof __BUILD_DATE__ !== "undefined" ? __BUILD_DATE__ : "dev";
     document.getElementById("select-custom-ol")?.addEventListener("change", updateCustomOptions);
     document.getElementById("input-custom-reg")?.addEventListener("input", testCustomReg);
     document.getElementById("test-custom-text")?.addEventListener("input", testCustomReg);
@@ -19299,7 +19299,17 @@ ${err}`, { type: "error" });
   });
   appWindow.onFocusChanged(({ payload: focused }) => {
     if (focused && !editorView.hasFocus) {
-      setTimeout(() => editorView.focus(), 30);
+      const tryFocus = async (retriesLeft) => {
+        try {
+          await appWindow.setFocus();
+        } catch (err) {
+        }
+        editorView.focus();
+        if (!editorView.hasFocus && retriesLeft > 0) {
+          setTimeout(() => tryFocus(retriesLeft - 1), 60);
+        }
+      };
+      setTimeout(() => tryFocus(3), 30);
     }
   });
   var dropdown = document.getElementById("dropdown-menu");

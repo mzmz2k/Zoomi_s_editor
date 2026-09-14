@@ -206,8 +206,17 @@ document.addEventListener('keydown', async (e) => {
 
 appWindow.onFocusChanged(({ payload: focused }) => {
   if (focused && !editorView.hasFocus) {
-    // 復帰直後すぎると効かないことがあるので少し遅らせる
-    setTimeout(() => editorView.focus(), 30);
+    // 復帰直後すぎると効かないことがあるので少し遅らせつつ、
+    // OS側フォーカスも明示的に取り直す（WebView2の入力ルーティングが
+    // 追いついていないケースへの対策）。効かなければ数回リトライする。
+    const tryFocus = async (retriesLeft) => {
+      try { await appWindow.setFocus(); } catch (err) {}
+      editorView.focus();
+      if (!editorView.hasFocus && retriesLeft > 0) {
+        setTimeout(() => tryFocus(retriesLeft - 1), 60);
+      }
+    };
+    setTimeout(() => tryFocus(3), 30);
   }
 });
 
