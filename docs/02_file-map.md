@@ -11,6 +11,7 @@ Zoomi_s_editor/
 ├── .gitignore
 ├── .vscode
 │   └── extensions.json
+├── LICENSE.txt
 ├── README.md
 ├── THIRD_PARTY_LICENSES.txt
 ├── myicon.png

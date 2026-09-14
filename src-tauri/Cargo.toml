@@ -1,6 +1,6 @@
 [package]
 name = "Zoomis_Editor"
-version = "1.5.0"
+version = "1.5.1"
 description = "小説執筆にも使えるシンプルなテキストエディタ"
 authors = ["Mzn"]
 edition = "2021"
