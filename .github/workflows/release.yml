@@ -1,0 +1,36 @@
+name: "Publish Release"
+
+on:
+  push:
+    tags:
+      - 'v*' # 「v0.1.0」などのタグが打たれた時に発動
+
+jobs:
+  publish-tauri:
+    permissions:
+      contents: write
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: install dependencies
+        run: npm ci
+
+      - name: build and release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: __VERSION__
+          releaseName: 'Obcowa v__VERSION__'
+          releaseBody: 'See the assets below to download Obcowa.'
+          releaseDraft: true
+          prerelease: false
